@@ -1,0 +1,6 @@
+.venv
+.idea
+.vscode
+config.yaml
+config_*.yaml
+!config_template.yaml

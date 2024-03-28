@@ -1,0 +1,37 @@
+# This is a template for the configuration file
+# You can copy this file to src/config.yaml and modify the values as needed
+goflet:
+  # Base URL for the API
+  baseUrl: "https://cdn.bzpl.tech"
+  # JWT Algorithm, if not provided, default is HS256, other options are HS384, HS512, RS256, RS384, RS512, ES256, ES384, ES512, PS256, PS384, PS512
+  jwtAlgorithm: "HS256"
+  # JWT Secret, required for HS256, HS384, HS512
+  jwtSecret: "goflet"
+  # JWT Private Key, required for RS256, RS384, RS512, ES256, ES384, ES512, PS256, PS384, PS512
+  jwtPrivateKey: ""
+  # JWT Issuer, if not provided, default is BackendService
+  jwtIssuer: "BackendService"
+  # JWT Expiration, the default expiration duration for JWT token in seconds, default is 3600
+  jwtExpiration: 3600
+
+mysql:
+  # MySQL Host
+  host: "localhost"
+  # MySQL Port
+  port: 3306
+  # MySQL Database
+  database: "goflet"
+  # MySQL Username
+  user: "root"
+  # MySQL Password
+  password: "root"
+
+redis:
+  # Redis Host
+  host: "localhost"
+  # Redis Port
+  port: 6379
+  # Redis Password
+  password: ""
+  # Redis Database
+  database: 0
