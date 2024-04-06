@@ -32,7 +32,9 @@ def main():
     run_app = loader.load()
 
     if args.dev:
-        run_app.prepare(host="0.0.0.0", port=9999, dev=True, auto_reload=True)
+        run_app.prepare(
+            host="0.0.0.0", port=9999, dev=True, auto_reload=True, reload_dir="."
+        )
     else:
         run_app.prepare(host=args.host, port=args.port, fast=True)
 

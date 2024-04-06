@@ -20,7 +20,7 @@ mysql:
   # MySQL Port
   port: 3306
   # MySQL Database
-  database: "goflet"
+  database: "scs_backend"
   # MySQL Username
   user: "root"
   # MySQL Password
