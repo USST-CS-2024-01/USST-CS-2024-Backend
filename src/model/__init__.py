@@ -1,5 +1,3 @@
-import enum
-
 from sqlalchemy import (
     Column,
     ForeignKey,
@@ -15,28 +13,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, declarative_base
 
+from .redis import RedisClient
+from .enum import *
+
 Base = declarative_base()
 
-
-class JsonableEnum(enum.Enum):
-    def to_json(self):
-        return self.value
-
-    @classmethod
-    def from_json(cls, value):
-        return cls(value)
-
-
-class UserType(JsonableEnum):
-    admin = "admin"
-    teacher = "teacher"
-    student = "student"
-
-
-class AccountStatus(JsonableEnum):
-    active = "active"
-    inactive = "inactive"
-    locked = "locked"
 
 
 class User(Base):
@@ -61,11 +42,6 @@ class User(Base):
     __secret_fields__ = ["password_hash"]
 
 
-class AnnouncementReceiverType(JsonableEnum):
-    all = "all"
-    class_ = "class"
-    group = "group"
-    individual = "individual"
 
 
 class Announcement(Base):
@@ -171,9 +147,6 @@ class GroupRole(Base):
     )
 
 
-class GroupTaskType(JsonableEnum):
-    group = "group"
-    individual = "individual"
 
 
 class GroupTask(Base):
@@ -182,7 +155,7 @@ class GroupTask(Base):
     group_id = Column(Integer, ForeignKey("group.id"), nullable=False, index=True)
     name = Column(String(100), nullable=False, index=True)
     details = Column(Text, nullable=False)
-    status = Column(Enum(GroupTaskType, name="task_status"), nullable=False, index=True)
+    status = Column(Enum(GroupTaskStatus, name="task_status"), nullable=False, index=True)
     related_files = relationship("File", secondary="group_task_attachment")
     publisher = Column(
         Integer, ForeignKey("group_role.id"), nullable=False
@@ -363,9 +336,6 @@ class GroupMemberRole(Base):
     )
 
 
-class GroupStatus(JsonableEnum):
-    pending = "pending"
-    normal = "normal"
 
 
 class Group(Base):
@@ -392,17 +362,6 @@ class Group(Base):
             ondelete="CASCADE",
         ),
     )
-
-
-class FileType(JsonableEnum):
-    document = "document"
-    other = "other"
-
-
-class FileOwnerType(JsonableEnum):
-    delivery = "delivery"
-    group = "group"
-    user = "user"
 
 
 class File(Base):
@@ -448,11 +407,6 @@ class File(Base):
     )
 
 
-class ClassStatus(JsonableEnum):
-    not_started = "not_started"
-    grouping = "grouping"
-    teaching = "teaching"
-    finished = "finished"
 
 
 class Class(Base):
@@ -534,11 +488,6 @@ class TaskAttachment(Base):
     )
 
 
-class RepoRecordStatus(JsonableEnum):
-    pending = "pending"
-    completed = "completed"
-    failed = "failed"
-
 
 class RepoRecord(Base):
     __tablename__ = "repo_record"
@@ -567,9 +516,6 @@ class RepoRecord(Base):
     )
 
 
-class DeliveryType(JsonableEnum):
-    group = "group"
-    individual = "individual"
 
 
 class DeliveryItem(Base):
@@ -605,14 +551,6 @@ class DeliveryItem(Base):
         UniqueConstraint("item_type", "item_file_id", "item_repo_id"),
     )
 
-
-class DeliveryStatus(JsonableEnum):
-    draft = "draft"
-    leader_review = "leader_review"
-    leader_rejected = "leader_rejected"
-    teacher_review = "teacher_review"
-    teacher_rejected = "teacher_rejected"
-    teacher_approved = "teacher_approved"
 
 
 class Delivery(Base):
@@ -658,10 +596,7 @@ class Delivery(Base):
     )
 
 
-class AIDocStatus(JsonableEnum):
-    pending = "pending"
-    completed = "completed"
-    failed = "failed"
+
 
 
 class AIDocScoreRecord(Base):
