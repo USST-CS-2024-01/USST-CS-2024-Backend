@@ -57,8 +57,8 @@ def validate(
                 )
             except Exception as e:
                 return ErrorResponse.new_error(
-                        code=400, message="Bad Request", detail=str(e)
-                    )
+                    code=400, message="Bad Request", detail=str(e)
+                )
 
             retval = f(*args, **kwargs)
             if isawaitable(retval):

@@ -7,6 +7,7 @@ def to_dict(self: any) -> dict:
     :param self: SQLAlchemy model instance
     :return: dictionary
     """
+
     def convert_value(v):
         if isinstance(v, JsonableEnum):
             return v.to_json()

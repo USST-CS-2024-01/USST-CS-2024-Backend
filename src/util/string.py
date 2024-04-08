@@ -39,5 +39,3 @@ def camelcase_to_underline(camelcase: str, capitalize: bool = False) -> str:
     if capitalize:
         underline = underline.upper()
     return underline
-
-

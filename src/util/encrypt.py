@@ -36,7 +36,7 @@ def decrypt_aes(key: bytes, iv: bytes, data: bytes) -> bytes:
     return decrypted
 
 
-def bcrypt_compare(password:str, hashed:str) -> bool:
+def bcrypt_compare(password: str, hashed: str) -> bool:
     """
     Compare a password with a hashed password
     :param password: Password

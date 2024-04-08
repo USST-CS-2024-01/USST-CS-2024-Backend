@@ -19,7 +19,6 @@ from .enum import *
 Base = declarative_base()
 
 
-
 class User(Base):
     __tablename__ = "user"
     id = Column(Integer, primary_key=True)
@@ -40,8 +39,6 @@ class User(Base):
     name = Column(String(50), nullable=False, index=True)
 
     __secret_fields__ = ["password_hash"]
-
-
 
 
 class Announcement(Base):
@@ -147,15 +144,15 @@ class GroupRole(Base):
     )
 
 
-
-
 class GroupTask(Base):
     __tablename__ = "group_task"
     id = Column(Integer, primary_key=True)
     group_id = Column(Integer, ForeignKey("group.id"), nullable=False, index=True)
     name = Column(String(100), nullable=False, index=True)
     details = Column(Text, nullable=False)
-    status = Column(Enum(GroupTaskStatus, name="task_status"), nullable=False, index=True)
+    status = Column(
+        Enum(GroupTaskStatus, name="task_status"), nullable=False, index=True
+    )
     related_files = relationship("File", secondary="group_task_attachment")
     publisher = Column(
         Integer, ForeignKey("group_role.id"), nullable=False
@@ -336,8 +333,6 @@ class GroupMemberRole(Base):
     )
 
 
-
-
 class Group(Base):
     __tablename__ = "group"
     id = Column(Integer, primary_key=True)
@@ -405,8 +400,6 @@ class File(Base):
             ondelete="CASCADE",
         ),
     )
-
-
 
 
 class Class(Base):
@@ -488,7 +481,6 @@ class TaskAttachment(Base):
     )
 
 
-
 class RepoRecord(Base):
     __tablename__ = "repo_record"
     id = Column(Integer, primary_key=True)
@@ -514,8 +506,6 @@ class RepoRecord(Base):
             ondelete="CASCADE",
         ),
     )
-
-
 
 
 class DeliveryItem(Base):
@@ -550,7 +540,6 @@ class DeliveryItem(Base):
         ),
         UniqueConstraint("item_type", "item_file_id", "item_repo_id"),
     )
-
 
 
 class Delivery(Base):
@@ -594,9 +583,6 @@ class Delivery(Base):
             ondelete="CASCADE",
         ),
     )
-
-
-
 
 
 class AIDocScoreRecord(Base):

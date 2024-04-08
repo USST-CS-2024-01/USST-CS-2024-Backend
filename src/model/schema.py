@@ -3,9 +3,20 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
-from .enum import UserType, AccountStatus, AnnouncementReceiverType, GroupStatus, FileType, FileOwnerType, ClassStatus, \
-    RepoRecordStatus, DeliveryType, DeliveryStatus, AIDocStatus, \
-    GroupTaskStatus
+from .enum import (
+    UserType,
+    AccountStatus,
+    AnnouncementReceiverType,
+    GroupStatus,
+    FileType,
+    FileOwnerType,
+    ClassStatus,
+    RepoRecordStatus,
+    DeliveryType,
+    DeliveryStatus,
+    AIDocStatus,
+    GroupTaskStatus,
+)
 
 
 class BaseJsonAbleModel(BaseModel):
@@ -25,7 +36,7 @@ class BaseJsonAbleModel(BaseModel):
             DeliveryType: lambda v: v.value,
             DeliveryStatus: lambda v: v.value,
             AIDocStatus: lambda v: v.value,
-            GroupTaskStatus: lambda v: v.value
+            GroupTaskStatus: lambda v: v.value,
         }
 
     def dict(self, **kwargs):
@@ -77,6 +88,7 @@ class GroupRoleSchema(BaseJsonAbleModel):
     role_name: str
     role_description: str
 
+
 class GroupTaskSchema(BaseJsonAbleModel):
     id: int
     group_id: int
@@ -122,6 +134,7 @@ class GroupMeetingAttachmentSchema(BaseJsonAbleModel):
     meeting_id: int
     file_id: int
 
+
 class GroupMemberSchema(BaseJsonAbleModel):
     id: int
     user_id: int
@@ -130,11 +143,9 @@ class GroupMemberSchema(BaseJsonAbleModel):
     repo_usernames: dict
 
 
-
 class GroupMemberRoleSchema(BaseJsonAbleModel):
     group_member_id: int
     role_id: int
-
 
 
 class GroupSchema(BaseJsonAbleModel):
@@ -164,7 +175,7 @@ class ClassSchema(BaseJsonAbleModel):
     name: str
     description: Optional[str] = None
     first_task_id: Optional[int] = None
-    task_list: List['TaskSchema']
+    task_list: List["TaskSchema"]
     status: ClassStatus
 
 
@@ -181,11 +192,9 @@ class TaskSchema(BaseJsonAbleModel):
     next_task_id: Optional[int] = None
 
 
-
 class TaskAttachmentSchema(BaseJsonAbleModel):
     task_id: int
     file_id: int
-
 
 
 class RepoRecordSchema(BaseJsonAbleModel):
@@ -221,7 +230,6 @@ class DeliverySchema(BaseJsonAbleModel):
     task_grade_percentage: float
 
 
-
 class AIDocScoreRecordSchema(BaseJsonAbleModel):
     id: int
     file_id: int
@@ -239,6 +247,7 @@ class TeacherScoreSchema(BaseJsonAbleModel):
     score_time: datetime
     score_details: Optional[dict] = None
 
+
 class LogSchema(BaseJsonAbleModel):
     id: int
     log_type: str
@@ -249,7 +258,6 @@ class LogSchema(BaseJsonAbleModel):
     user_type: UserType
     operation_time: datetime
     operation_ip: str
-
 
 
 class ConfigSchema(BaseJsonAbleModel):
