@@ -70,7 +70,7 @@ async def get_user_list(request, query: ListUserRequest):
         )
     if query.order_by:
         stmt = stmt.order_by(
-            getattr(getattr(User, query.order_by), query.asc and "asc" or "desc")
+            getattr(getattr(User, query.order_by), query.asc and "asc" or "desc")()
         )
     stmt = stmt.offset(query.offset).limit(query.limit)
     count_stmt = select(func.count()).select_from(stmt.subquery())
