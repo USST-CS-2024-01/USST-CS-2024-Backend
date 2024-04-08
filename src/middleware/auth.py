@@ -2,12 +2,13 @@ import asyncio
 from functools import wraps
 from inspect import isawaitable
 from operator import and_
-from typing import Callable, TypeVar
+from typing import Callable, List, TypeVar
 
 from sanic_ext.utils.extraction import extract_request
 from sqlalchemy import select
 
 from model import User, AccountStatus
+from model.enum import UserType
 from model.response_model import ErrorResponse
 
 T = TypeVar("T")
@@ -71,6 +72,34 @@ def need_login() -> Callable[[T], T]:
 
             request.ctx.user = user
             request.ctx.session_id = session_id
+            retval = f(*args, **kwargs)
+            if isawaitable(retval):
+                retval = await retval
+            return retval
+
+        return decorated_function
+
+    return decorator  # type: ignore
+
+
+def need_role(
+        roles: List[UserType]
+) -> Callable[[T], T]:
+    """
+    Decorator to require role
+    :param roles: List of roles
+    :return: Decorator
+    """
+
+    def decorator(f):
+        @wraps(f)
+        async def decorated_function(*args, **kwargs):
+            request = extract_request(*args)
+            user = request.ctx.user
+            if user.user_type not in roles:
+                return ErrorResponse.new_error(
+                    code=403, message="Forbidden", detail="No permission"
+                )
             retval = f(*args, **kwargs)
             if isawaitable(retval):
                 retval = await retval

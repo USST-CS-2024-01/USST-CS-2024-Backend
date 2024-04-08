@@ -1,8 +1,10 @@
-from typing import Optional
+from typing import List, Optional, TypeVar
 
 from pydantic import BaseModel, Field
 from sanic import HTTPResponse
 from sanic.response import JSONResponse
+
+T = TypeVar("T")
 
 
 class BaseResponse(BaseModel):
@@ -36,7 +38,9 @@ class ErrorResponse(BaseResponse):
     detail: Optional[str] = Field(None, description="详细信息")
 
     @staticmethod
-    def new_error(code: int, message: str, detail: Optional[str] = None) -> JSONResponse:
+    def new_error(
+        code: int, message: str, detail: Optional[str] = None
+    ) -> JSONResponse:
         """
         创建错误响应
         :param code:     状态码
@@ -47,3 +51,14 @@ class ErrorResponse(BaseResponse):
         err_resp = ErrorResponse(code=code, message=message, detail=detail)
 
         return JSONResponse(err_resp.dict(), status=code)
+
+
+class BaseListResponse(BaseResponse):
+    """
+    列表响应
+    """
+
+    page: Optional[int] = Field(1, description="页码")
+    page_size: Optional[int] = Field(10, description="页大小")
+    total: Optional[int] = Field(0, description="总数")
+    data: List[T] = Field([], description="数据")

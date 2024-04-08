@@ -35,26 +35,40 @@ def validate(
         @wraps(f)
         async def decorated_function(*args, **kwargs):
             request = extract_request(*args)
-
-            schema = None
-            if schemas["json"]:
-                schema = schemas["json"]
-            elif schemas["form"]:
-                schema = schemas["form"]
-            elif schemas["query"]:
-                schema = schemas["query"]
-
             try:
-                await do_validation(
-                    model=json,
-                    data=request.json,
-                    schema=schema,
-                    request=request,
-                    kwargs=kwargs,
-                    body_argument=body_argument,
-                    allow_multiple=False,
-                    allow_coerce=False,
-                )
+                if schemas["json"]:
+                    await do_validation(
+                        model=json,
+                        data=request.json,
+                        schema=schemas["json"],
+                        request=request,
+                        kwargs=kwargs,
+                        body_argument=body_argument,
+                        allow_multiple=False,
+                        allow_coerce=False,
+                    )
+                elif schemas["form"]:
+                    await do_validation(
+                        model=form,
+                        data=request.form,
+                        schema=schemas["form"],
+                        request=request,
+                        kwargs=kwargs,
+                        body_argument=body_argument,
+                        allow_multiple=True,
+                        allow_coerce=True,
+                    )
+                elif schemas["query"]:
+                    await do_validation(
+                        model=query,
+                        data=request.args,
+                        schema=schemas["query"],
+                        request=request,
+                        kwargs=kwargs,
+                        body_argument=query_argument,
+                        allow_multiple=True,
+                        allow_coerce=True,
+                    )
             except Exception as e:
                 return ErrorResponse.new_error(
                     code=400, message="Bad Request", detail=str(e)
@@ -67,4 +81,4 @@ def validate(
 
         return decorated_function
 
-    return decorator # type: ignore
+    return decorator  # type: ignore
