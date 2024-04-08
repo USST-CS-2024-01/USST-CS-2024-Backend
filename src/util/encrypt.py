@@ -44,3 +44,12 @@ def bcrypt_compare(password: str, hashed: str) -> bool:
     :return: True if the password matches the hashed password, False otherwise
     """
     return bcrypt.checkpw(password.encode(), hashed.encode())
+
+
+def bcrypt_hash(password: str) -> str:
+    """
+    Hash a password
+    :param password: Password
+    :return: Hashed password
+    """
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()

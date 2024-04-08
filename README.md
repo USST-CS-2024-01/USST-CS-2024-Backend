@@ -43,3 +43,16 @@ Please use [black](https://github.com/psf/black) for code formatting.
 ```bash
 black .
 ```
+
+
+## VSCode Settings
+
+```json
+{
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportGeneralTypeIssues": "none"
+    }
+}
+```
