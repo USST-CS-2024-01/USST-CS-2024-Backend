@@ -45,8 +45,7 @@ def need_login() -> Callable[[T], T]:
 
             no_check = await cache.get("session_no_check:" + session_id)
             if no_check:
-                request.ctx.user = user
-                asyncio.create_task(cache.update_expire(session_id, 3600))
+                await asyncio.create_task(cache.update_expire(session_id, 3600))
             else:
                 stmt = (
                     select(User)
@@ -65,13 +64,13 @@ def need_login() -> Callable[[T], T]:
                     return ErrorResponse.new_error(
                         code=401, message="Unauthorized", detail="Invalid session ID"
                     )
-                asyncio.create_task(cache.set_pickle(session_id, user, expire=3600))
-                asyncio.create_task(
+                await asyncio.create_task(cache.set_pickle(session_id, user, expire=3600))
+                await asyncio.create_task(
                     cache.set("session_no_check:" + session_id, 1, expire=60)
                 )
-                request.ctx.user = user
-                request.ctx.session_id = session_id
 
+            request.ctx.user = user
+            request.ctx.session_id = session_id
             retval = f(*args, **kwargs)
             if isawaitable(retval):
                 retval = await retval
@@ -79,4 +78,4 @@ def need_login() -> Callable[[T], T]:
 
         return decorated_function
 
-    return decorator # type: ignore
+    return decorator  # type: ignore
