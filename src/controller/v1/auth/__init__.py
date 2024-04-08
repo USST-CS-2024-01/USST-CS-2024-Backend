@@ -1,19 +1,22 @@
 import base64
+import re
 import time
 import uuid
 
 from sanic import Blueprint
 
-from util.sql_model import to_dict
+from middleware.auth import need_login
+from model.schema import UserSchema
 from middleware.validator import validate
 from sanic_ext.extensions.openapi import openapi
-from sqlalchemy import select
+from sqlalchemy import select, insert
 
 from controller.v1.auth.request_model import LoginRequest
 from controller.v1.auth.response_model import LoginInitResponse, LoginResponse
-from model import User, AccountStatus
-from model.response_model import ErrorResponse
+from model import User, AccountStatus, Log
+from model.response_model import BaseResponse, ErrorResponse
 from util import encrypt
+from util.string import mask_string
 
 auth_bp = Blueprint("auth", url_prefix="/auth")
 
@@ -63,6 +66,8 @@ async def init(request):
     await cache.set_pickle(session_id, (key, iv), expire=300)
 
     resp = LoginInitResponse(
+        code=200,
+        message="ok",
         session_id=session_id,
         expires_in=300,
         key=key.hex(),
@@ -85,6 +90,15 @@ async def init(request):
             ref_template="#/components/schemas/{model}"
         )
     }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": LoginResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
 )
 @validate(json=LoginRequest)
 async def login(request, body: LoginRequest):
@@ -119,22 +133,22 @@ async def login(request, body: LoginRequest):
         )
 
     stmt = select(User).where(User.username == body.username).limit(1)
-    with db() as db:
-        user: User or None = db.scalar(stmt)
+    with db() as sess:
+        user: User = sess.scalar(stmt)
 
-    if not user:
+    if user is None:
         return ErrorResponse.new_error(
             400,
             "Invalid username or password",
         )
 
-    if not encrypt.bcrypt_compare(password, user.password_hash):
+    if not encrypt.bcrypt_compare(password, str(user.password_hash)):
         return ErrorResponse.new_error(
             400,
             "Invalid username or password",
         )
 
-    if user.account_status != AccountStatus.active:
+    if AccountStatus(user.account_status) != AccountStatus.active:
         return ErrorResponse.new_error(
             403,
             "Account is not active",
@@ -143,9 +157,79 @@ async def login(request, body: LoginRequest):
     login_session_id = generate_login_session_id()
     await cache.set_pickle(login_session_id, user, expire=3600)
 
+    stmt = insert(Log).values(
+        log_type="login",
+        content="User {}(id:{}) logged in at {} from ip {}, sessionId: {}".format(
+            user.username,
+            user.id,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            request.ip,
+            mask_string(login_session_id),
+        ),
+        user_id=user.id,
+        user_name=user.name,
+        user_employee_id=user.employee_id,
+        user_type=user.user_type,
+        operation_time=time.strftime("%Y-%m-%d %H:%M:%S"),
+        operation_ip=request.ip,
+    )
+    with db() as sess:
+        sess.execute(stmt)
+        sess.commit()
+
     resp = LoginResponse(
+        code=200,
+        message="ok",
         session_id=login_session_id,
-        user=to_dict(user),
+        user=UserSchema.from_orm(user),
     )
 
     return resp.json_response()
+
+
+@auth_bp.route("/logout", methods=["POST"])
+@openapi.summary("登出")
+@openapi.tag("鉴权接口")
+@openapi.description("登出接口，清除登录状态。")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@need_login()
+async def logout(request):
+    cache = request.app.ctx.cache
+    db = request.app.ctx.db
+
+    user = request.ctx.user
+    login_session_id = request.ctx.session_id
+
+    stmt = insert(Log).values(
+        log_type="logout",
+        content="User {}(id:{}) logged out at {} from ip {}, sessionId: {}".format(
+            user.username,
+            user.id,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            request.ip,
+            mask_string(login_session_id),
+        ),
+        user_id=user.id,
+        user_name=user.name,
+        user_employee_id=user.employee_id,
+        user_type=user.user_type,
+        operation_time=time.strftime("%Y-%m-%d %H:%M:%S"),
+        operation_ip=request.ip,
+    )
+    with db() as sess:
+        sess.execute(stmt)
+        sess.commit()
+
+    # Delete the login session
+    await cache.delete(login_session_id)
+    await cache.get("session_no_check:" + login_session_id)
+
+    return BaseResponse(code=200, message="ok").json_response()

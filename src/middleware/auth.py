@@ -70,6 +70,7 @@ def need_login() -> Callable[[T], T]:
                     cache.set("session_no_check:" + session_id, 1, expire=60)
                 )
                 request.ctx.user = user
+                request.ctx.session_id = session_id
 
             retval = f(*args, **kwargs)
             if isawaitable(retval):
@@ -78,4 +79,4 @@ def need_login() -> Callable[[T], T]:
 
         return decorated_function
 
-    return decorator
+    return decorator # type: ignore

@@ -39,3 +39,23 @@ def camelcase_to_underline(camelcase: str, capitalize: bool = False) -> str:
     if capitalize:
         underline = underline.upper()
     return underline
+
+
+def mask_string(text: str) -> str:
+    """
+    Mask the text with asterisk.
+
+    Example:
+    login_session:xxxx-xxx-xxx -> login_session:x********
+    xxx-xxx-xxx -> x*********
+
+    :param text:
+    :return:
+    """
+    if len(text) < 8:
+        return text[0] + "*" * (len(text) - 1)
+    if ":" in text:
+        return text.split(":")[0] + ":" + text.split(":")[1][:8] + "*" * (
+            len(text.split(":")[1]) - 8
+        )
+    return text[:8] + "*" * (len(text) - 8)

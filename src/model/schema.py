@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-
+from sanic_ext import openapi
 from pydantic import BaseModel
 
 from .enum import (
@@ -46,6 +46,7 @@ class BaseJsonAbleModel(BaseModel):
         return super().json(**kwargs)
 
 
+@openapi.component
 class UserSchema(BaseJsonAbleModel):
     id: int
     username: str

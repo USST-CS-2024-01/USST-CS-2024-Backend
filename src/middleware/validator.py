@@ -67,4 +67,4 @@ def validate(
 
         return decorated_function
 
-    return decorator
+    return decorator # type: ignore

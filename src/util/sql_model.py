@@ -1,7 +1,8 @@
+from typing import Any
 from model import JsonableEnum
 
 
-def to_dict(self: any) -> dict:
+def to_dict(self: Any) -> dict:
     """
     Convert a SQLAlchemy model instance to a dictionary.
     :param self: SQLAlchemy model instance

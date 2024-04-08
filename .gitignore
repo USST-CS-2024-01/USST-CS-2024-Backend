@@ -4,3 +4,4 @@
 config.yaml
 config_*.yaml
 !config_template.yaml
+__pycache__

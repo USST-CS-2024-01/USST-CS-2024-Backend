@@ -1,6 +1,7 @@
 from pydantic import Field
 
 from model.response_model import BaseResponse
+from model.schema import UserSchema
 
 
 class LoginInitResponse(BaseResponse):
@@ -20,4 +21,4 @@ class LoginResponse(BaseResponse):
     """
 
     session_id: str = Field(..., description="会话ID，用于后续请求")
-    user: dict = Field(..., description="用户信息")
+    user: UserSchema = Field(..., description="用户信息")

@@ -1,3 +1,4 @@
+from typing import Optional
 from util.string import underline_to_camelcase
 
 
@@ -6,8 +7,8 @@ class Config:
     Base configuration class
     """
 
-    SECTION: str = None
-    PARAMS: dict = None
+    SECTION: str
+    PARAMS: dict
 
     def __repr__(self):
         attrs = [f"{k}={v}" for k, v in self.__dict__.items()]

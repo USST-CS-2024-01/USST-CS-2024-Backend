@@ -10,8 +10,8 @@ class BaseResponse(BaseModel):
     基础响应
     """
 
-    code: int = Field(200, description="状态码")
-    message: str = Field("ok", description="消息")
+    code: Optional[int] = Field(200, description="状态码")
+    message: Optional[str] = Field("ok", description="消息")
 
     def json_response(self) -> HTTPResponse:
         """
@@ -19,9 +19,9 @@ class BaseResponse(BaseModel):
         :return: JSON 响应
         """
         resp = HTTPResponse(
-            body=self.json(),
+            body=self.model_dump_json(),
             content_type="application/json",
-            status=self.code,
+            status=self.code or 200,
         )
         return resp
 
@@ -36,7 +36,7 @@ class ErrorResponse(BaseResponse):
     detail: Optional[str] = Field(None, description="详细信息")
 
     @staticmethod
-    def new_error(code: int, message: str, detail: str = None) -> JSONResponse:
+    def new_error(code: int, message: str, detail: Optional[str] = None) -> JSONResponse:
         """
         创建错误响应
         :param code:     状态码
