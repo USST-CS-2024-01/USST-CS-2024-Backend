@@ -1,4 +1,5 @@
 import enum
+
 from sanic_ext import openapi
 
 
@@ -95,3 +96,10 @@ class AIDocStatus(JsonableEnum):
     pending = "pending"
     completed = "completed"
     failed = "failed"
+
+
+@openapi.component
+class GroupMemberRoleStatus(JsonableEnum):
+    approved = "approved"
+    leader_review = "leader_review"
+    member_review = "member_review"

@@ -30,6 +30,8 @@ role_bp = Blueprint("role")
 
 
 @role_bp.route("/class/<class_id:int>/role/list", methods=["GET"])
+@openapi.summary("获取班级角色列表")
+@openapi.tag("角色接口")
 @need_login()
 def get_role_list(request, class_id: int):
     db = request.app.ctx.db
@@ -53,6 +55,8 @@ def get_role_list(request, class_id: int):
 
 
 @role_bp.route("/class/<class_id:int>/role/create", methods=["POST"])
+@openapi.summary("创建班级角色")
+@openapi.tag("角色接口")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=CreateGroupRoleRequest)

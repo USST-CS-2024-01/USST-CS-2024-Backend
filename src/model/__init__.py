@@ -223,28 +223,11 @@ class GroupMeetingAttachment(Base):
     )
 
 
-class GroupMember(Base):
-    __tablename__ = "group_member"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(
-        Integer,
-        ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"),
-    )
-    group_id = Column(
-        Integer,
-        ForeignKey("group.id", ondelete="CASCADE", onupdate="CASCADE"),
-    )
-    roles = relationship("GroupRole", secondary="group_member_role")
-    repo_usernames = Column(JSON, nullable=True, default={})
-
-    __table_args__ = (UniqueConstraint("user_id", "group_id"),)
-
-
 class GroupMemberRole(Base):
     __tablename__ = "group_member_role"
-    group_member_id = Column(
+    class_member_id = Column(
         Integer,
-        ForeignKey("group_member.id", ondelete="CASCADE", onupdate="CASCADE"),
+        ForeignKey("class_member.id", ondelete="CASCADE", onupdate="CASCADE"),
         primary_key=True,
     )
     role_id = Column(
@@ -252,7 +235,7 @@ class GroupMemberRole(Base):
         ForeignKey("group_role.id", ondelete="CASCADE", onupdate="CASCADE"),
     )
 
-    __table_args__ = (UniqueConstraint("group_member_id", "role_id"),)
+    __table_args__ = (UniqueConstraint("class_member_id", "role_id"),)
 
 
 class Group(Base):
@@ -266,6 +249,9 @@ class Group(Base):
     )
     name = Column(String(50), nullable=False, index=True)
     status = Column(Enum(GroupStatus, name="group_status"), nullable=False, index=True)
+
+    members = relationship("ClassMember", backref="group")
+
     # 代表了当前组的进度，指向以班级为范围的任务ID
     current_task_id = Column(
         Integer,
@@ -345,7 +331,20 @@ class ClassMember(Base):
         nullable=False,
         index=True,
     )
+    group_id = Column(
+        Integer,
+        ForeignKey("group.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=True,
+    )
     is_teacher = Column(Boolean, nullable=False, index=True)
+    repo_usernames = Column(JSON, nullable=True, default=[])
+    status = Column(
+        Enum(GroupMemberRoleStatus, name="member_role_status"),
+        nullable=True,
+        index=True,
+    )
+
+    roles = relationship("GroupRole", secondary="group_member_role")
 
     user = relationship("User", backref="class_members")
     class_ = relationship("Class", backref="class_members")
@@ -367,7 +366,7 @@ class Task(Base):
     content = Column(Text, nullable=False)
     specified_role = Column(
         Integer,
-        ForeignKey("group_role.id", ondelete="CASCADE", onupdate="CASCADE"),
+        ForeignKey("group_role.id", ondelete="SET NULL", onupdate="CASCADE"),
         nullable=True,
     )
     attached_files = relationship("File", secondary="task_attachment")

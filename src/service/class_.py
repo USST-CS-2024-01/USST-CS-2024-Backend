@@ -3,7 +3,7 @@ from sqlalchemy import select, and_, or_
 from model import Class, UserType, GroupRole, Task, ClassStatus
 
 
-def has_class_access(request, class_id: int) -> bool:
+def has_class_access(request, class_id: int) -> Class or bool:
     """
     Check whether the user has access to the class
     :param request: Request
@@ -23,8 +23,8 @@ def has_class_access(request, class_id: int) -> bool:
     )
 
     with db() as session:
-        result = session.execute(stmt)
-        return result.scalar() is not None
+        result = session.execute(stmt).scalar()
+        return result if result else False
 
 
 def generate_new_class(db, class_name: str, class_description: str = None) -> Class:
@@ -118,6 +118,7 @@ def generate_new_class(db, class_name: str, class_description: str = None) -> Cl
                 task.next_task_id = new_tasks[i + 1].id
 
         session.commit()
+        session.refresh(new_class)
 
         return new_class
 

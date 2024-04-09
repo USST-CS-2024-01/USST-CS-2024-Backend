@@ -36,7 +36,7 @@ class BaseDataResponse(BaseResponse):
     data: Optional[T] = Field(None, description="数据")
 
     @staticmethod
-    def new_data(data: T) -> JSONResponse:
+    def new_data(data: T) -> HTTPResponse:
         """
         创建数据响应
         :param data: 数据
@@ -44,7 +44,11 @@ class BaseDataResponse(BaseResponse):
         """
         data_resp = BaseDataResponse(data=data)
 
-        return JSONResponse(data_resp.dict(), status=200)
+        return HTTPResponse(
+            body=data_resp.model_dump_json(),
+            content_type="application/json",
+            status=200,
+        )
 
 
 class ErrorResponse(BaseResponse):

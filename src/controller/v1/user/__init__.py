@@ -36,7 +36,7 @@ user_bp = Blueprint("user", url_prefix="/user")
 @need_login()
 async def get_user_info(request):
     return MeUserResponse(
-        code=200, message="ok", user=UserSchema.from_orm(request.ctx.user)
+        code=200, message="ok", data=UserSchema.from_orm(request.ctx.user)
     ).json_response()
 
 
@@ -140,7 +140,7 @@ async def update_user_info(request, body: MeUserUpdateRequest):
     return MeUserResponse(
         code=200,
         message="ok",
-        user=UserSchema.from_orm(user_service.get_user(db, user_id=user.id)),
+        data=UserSchema.from_orm(user_service.get_user(db, user_id=user.id)),
     ).json_response()
 
 
@@ -169,7 +169,7 @@ async def get_user(request, user_id):
         return ErrorResponse.new_error(code=404, message="用户不存在")
 
     return MeUserResponse(
-        code=200, message="ok", user=UserSchema.from_orm(user)
+        code=200, message="ok", data=UserSchema.from_orm(user)
     ).json_response()
 
 
@@ -265,7 +265,7 @@ async def update_user(request, user_id, body: UserUpdateRequest):
     return MeUserResponse(
         code=200,
         message="ok",
-        user=UserSchema.from_orm(user_service.get_user(db, user_id=user_id)),
+        data=UserSchema.from_orm(user_service.get_user(db, user_id=user_id)),
     ).json_response()
 
 
@@ -335,5 +335,5 @@ async def create_user(request, body: UserUpdateRequest):
     return MeUserResponse(
         code=200,
         message="ok",
-        user=new_user_pydantic,
+        data=new_user_pydantic,
     ).json_response()

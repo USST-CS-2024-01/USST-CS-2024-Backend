@@ -17,6 +17,7 @@ from .enum import (
     DeliveryStatus,
     AIDocStatus,
     GroupTaskStatus,
+    GroupMemberRoleStatus,
 )
 
 
@@ -144,16 +145,8 @@ class GroupMeetingAttachmentSchema(BaseJsonAbleModel):
     file_id: int
 
 
-class GroupMemberSchema(BaseJsonAbleModel):
-    id: int
-    user_id: int
-    group_id: int
-    roles: List[GroupRoleSchema]
-    repo_usernames: dict
-
-
 class GroupMemberRoleSchema(BaseJsonAbleModel):
-    group_member_id: int
+    class_member_id: int
     role_id: int
 
 
@@ -163,6 +156,7 @@ class GroupSchema(BaseJsonAbleModel):
     name: str
     status: GroupStatus
     current_task_id: Optional[int] = None
+    members: List["ClassMemberSchema"]
 
 
 class FileSchema(BaseJsonAbleModel):
@@ -192,7 +186,11 @@ class ClassMemberSchema(BaseJsonAbleModel):
     id: int
     class_id: int
     user_id: int
+    group_id: Optional[int] = None
+    roles: Optional[List[GroupRoleSchema]] = None
+    repo_usernames: Optional[list] = None
     is_teacher: bool
+    status: Optional[GroupMemberRoleStatus] = None
 
     user: UserSchema
 
