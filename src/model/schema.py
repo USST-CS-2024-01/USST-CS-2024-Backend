@@ -23,7 +23,7 @@ class BaseJsonAbleModel(BaseModel):
     class Config:
         from_attributes = True
         json_encoders = {
-            datetime: lambda v: v.timestamp(),
+            datetime: lambda v: int(v.timestamp()),
             UserType: lambda v: v.value,
             AccountStatus: lambda v: v.value,
             AnnouncementReceiverType: lambda v: v.value,
@@ -87,6 +87,7 @@ class GroupRoleSchema(BaseJsonAbleModel):
     class_id: int
     role_name: str
     role_description: str
+    is_manager: bool
 
 
 class GroupTaskSchema(BaseJsonAbleModel):
@@ -175,8 +176,17 @@ class ClassSchema(BaseJsonAbleModel):
     name: str
     description: Optional[str] = None
     first_task_id: Optional[int] = None
-    task_list: List["TaskSchema"]
+    task_list: Optional[List["TaskSchema"]] = None
     status: ClassStatus
+
+
+class ClassMemberSchema(BaseJsonAbleModel):
+    id: int
+    class_id: int
+    user_id: int
+    is_teacher: bool
+
+    user: UserSchema
 
 
 class TaskSchema(BaseJsonAbleModel):

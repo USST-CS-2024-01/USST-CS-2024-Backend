@@ -28,6 +28,25 @@ class BaseResponse(BaseModel):
         return resp
 
 
+class BaseDataResponse(BaseResponse):
+    """
+    数据响应
+    """
+
+    data: Optional[T] = Field(None, description="数据")
+
+    @staticmethod
+    def new_data(data: T) -> JSONResponse:
+        """
+        创建数据响应
+        :param data: 数据
+        :return:     数据响应
+        """
+        data_resp = BaseDataResponse(data=data)
+
+        return JSONResponse(data_resp.dict(), status=200)
+
+
 class ErrorResponse(BaseResponse):
     """
     错误响应

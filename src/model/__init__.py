@@ -1,4 +1,6 @@
+from operator import is_
 from sqlalchemy import (
+    Boolean,
     Column,
     ForeignKey,
     Integer,
@@ -128,10 +130,11 @@ class AnnouncementAttachment(Base):
 class GroupRole(Base):
     __tablename__ = "group_role"
     id = Column(Integer, primary_key=True)
-    # 在每个班级中，角色ID是统一的，class_id为0表示这个是作为模板的角色
+    # 在每个班级中，角色ID是统一的，class_id为1表示这个是作为模板的角色
     class_id = Column(Integer, ForeignKey("class.id"), nullable=False)
     role_name = Column(String(50), nullable=False)  # 角色名称
     role_description = Column(Text, nullable=False)  # 角色描述
+    is_manager = Column(Boolean, nullable=False)  # 是否为组长角色
 
     # Indexes
     __table_args__ = (
@@ -416,6 +419,8 @@ class Class(Base):
         index=True,
     )
 
+    members = relationship("User", secondary="class_member", viewonly=True)
+
     # Indexes
     __table_args__ = (
         ForeignKeyConstraint(
@@ -424,6 +429,34 @@ class Class(Base):
             name="fk_class_task",
             ondelete="SET NULL",
         ),
+    )
+
+
+class ClassMember(Base):
+    __tablename__ = "class_member"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False, index=True)
+    class_id = Column(Integer, ForeignKey("class.id"), nullable=False, index=True)
+    is_teacher = Column(Boolean, nullable=False, index=True)
+
+    user = relationship("User", backref="class_members")
+    class_ = relationship("Class", backref="class_members")
+
+    # Indexes
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["user_id"],
+            ["user.id"],
+            name="fk_class_member_user",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["class_id"],
+            ["class.id"],
+            name="fk_class_member_class",
+            ondelete="CASCADE",
+        ),
+        UniqueConstraint("user_id", "class_id"),
     )
 
 

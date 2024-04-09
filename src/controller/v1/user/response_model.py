@@ -9,5 +9,5 @@ class MeUserResponse(BaseResponse):
     查询当前用户响应
     """
 
-    user: UserSchema = Field(..., description="用户信息")
+    data: UserSchema = Field(..., description="用户信息")
 

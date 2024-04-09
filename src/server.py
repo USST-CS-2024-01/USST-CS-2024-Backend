@@ -17,7 +17,6 @@ def create_app(app_name: str, config_file: str = "config.yaml") -> Sanic:
     inject_config(app.config, config_file=config_file)
     inject_controller(app)
     inject_listener(app)
-
     # Add security scheme, Authentication header is required
     app.ext.openapi.add_security_scheme(
         "session",

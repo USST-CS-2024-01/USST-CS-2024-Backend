@@ -2,6 +2,7 @@ from sanic import Sanic
 from sanic.log import logger
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
+from service import init
 
 from model import Base
 
@@ -43,5 +44,7 @@ async def before_server_start(app: Sanic) -> None:
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(bind=engine)
     app.ctx.db = scoped_session(session_factory)
+
+    init.database_init(app.ctx.db)
 
     logger.info("Mysql attached.")
