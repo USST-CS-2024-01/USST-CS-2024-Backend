@@ -122,6 +122,52 @@ def generate_new_class(db, class_name: str, class_description: str = None) -> Cl
         return new_class
 
 
+def change_class_task_sequence(db, class_id: int, task_id_list: list[int]) -> None:
+    """
+    Change the sequence of tasks in a class
+    :param db: Database session
+    :param class_id: Class ID
+    :param task_id_list: Task ID list
+    :return: Whether the operation is successful
+    """
+    # task_id_list中不能存在重复的task_id
+    if len(task_id_list) != len(set(task_id_list)):
+        raise ValueError("Task ID list contains duplicates.")
+
+    with db() as session:
+        stmt_class = select(Class).where(Class.id == class_id)
+        target_class = session.execute(stmt_class).scalar()
+        if not target_class:
+            raise ValueError("Class not found.")
+
+        # 获取班级的所有任务
+        stmt_tasks = session.query(Task).filter(Task.class_id == class_id)
+        all_tasks = stmt_tasks.all()
+        if len(all_tasks) != len(task_id_list):
+            raise ValueError("Task count mismatch.")
+
+        # 检查task_id_list中的task_id是否都属于该班级
+        for task_id in task_id_list:
+            if task_id not in [task.id for task in all_tasks]:
+                raise ValueError("Task ID not found in class.")
+
+        all_tasks.sort(key=lambda x: task_id_list.index(x.id))
+
+        # TODO 检查当前任务是否可以被调整顺序
+
+        # 更新任务的next_task_id
+        for i, task_id in enumerate(task_id_list):
+            if i < len(task_id_list) - 1:
+                all_tasks[i].next_task_id = task_id_list[i + 1]
+            else:
+                all_tasks[i].next_task_id = None
+
+        # 更新班级的first_task_id
+        target_class.first_task_id = task_id_list[0]
+
+        session.commit()
+
+
 if __name__ == "__main__":
     from sqlalchemy import engine
     from sqlalchemy.orm import sessionmaker
@@ -131,4 +177,5 @@ if __name__ == "__main__":
     )
     session_factory = sessionmaker(bind=engine)
 
-    print(generate_new_class(session_factory, "测试课程", "课程描述"))
+    # print(generate_new_class(session_factory, "测试课程", "课程描述"))
+    change_class_task_sequence(session_factory, 2, [8, 9, 10, 11, 12, 13, 14])

@@ -134,5 +134,6 @@ def get_class_info(request, class_id: int):
             stu_count=stu_count,
             tea_list=tea_list,
             stu_list=stu_list,
+            first_task_id=result.first_task_id,
         )
     )

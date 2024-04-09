@@ -1,13 +1,13 @@
 from sanic import Blueprint
 from sanic_ext import openapi
-from sqlalchemy import and_, func, select, or_
+from sqlalchemy import and_, select
 
+import service.class_
 from controller.v1.class_.request_model import ListClassRequest
-from controller.v1.class_.response_model import ClassReturnItem
-from controller.v1.task.request_model import CreateTaskRequest
-from middleware.auth import need_login
+from controller.v1.task.request_model import CreateTaskRequest, SetTaskSequenceRequest
+from middleware.auth import need_login, need_role
 from middleware.validator import validate
-from model import Class, ClassMember, Task, GroupRole
+from model import Task, GroupRole
 from model.enum import UserType
 from model.response_model import (
     BaseDataResponse,
@@ -15,7 +15,7 @@ from model.response_model import (
     BaseResponse,
     ErrorResponse,
 )
-from model.schema import ClassSchema, TaskSchema
+from model.schema import TaskSchema
 from service.class_ import has_class_access
 from util.string import timestamp_to_datetime
 
@@ -60,6 +60,7 @@ def list_class_tasks(request, class_id: int):
 @openapi.tag("任务接口")
 @openapi.description("创建班级任务")
 @need_login()
+@need_role([UserType.admin, UserType.teacher])
 @validate(json=CreateTaskRequest)
 def create_class_task(request, class_id: int, body: CreateTaskRequest):
     """
@@ -115,3 +116,36 @@ def create_class_task(request, class_id: int, body: CreateTaskRequest):
         message="ok",
         data=new_pydantic,
     ).json_response()
+
+
+@task_bp.route("/class/<class_id:int>/task/sequence", methods=["POST"])
+@openapi.summary("设置任务顺序")
+@openapi.tag("任务接口")
+@openapi.description(
+    "设置任务顺序，传入任务ID列表，按照列表顺序设置任务顺序，需要将该班级下的所有任务ID传入，且不能出现重复ID"
+)
+@need_login()
+@need_role([UserType.admin, UserType.teacher])
+@validate(json=SetTaskSequenceRequest)
+def set_task_sequence(request, class_id: int, body: SetTaskSequenceRequest):
+    """
+    设置任务顺序
+    :param request: Request
+    :param class_id: Class ID
+    :param body: List of task IDs
+    :return: Success response
+    """
+    db = request.app.ctx.db
+
+    if not has_class_access(request, class_id):
+        return ErrorResponse.new_error(
+            404,
+            "Class Not Found",
+        )
+
+    try:
+        service.class_.change_class_task_sequence(db, class_id, body.sequences)
+    except ValueError as e:
+        return ErrorResponse.new_error(400, str(e))
+
+    return BaseResponse(code=200, message="ok").json_response()
