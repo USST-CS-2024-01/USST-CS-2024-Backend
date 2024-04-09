@@ -17,7 +17,12 @@ from middleware.auth import need_login, need_role
 from middleware.validator import validate
 from model import Class, ClassMember, GroupRole
 from model.enum import UserType
-from model.response_model import BaseDataResponse, BaseListResponse, BaseResponse, ErrorResponse
+from model.response_model import (
+    BaseDataResponse,
+    BaseListResponse,
+    BaseResponse,
+    ErrorResponse,
+)
 from model.schema import ClassSchema, GroupRoleSchema
 from service.class_ import has_class_access
 
@@ -35,9 +40,7 @@ def get_role_list(request, class_id: int):
             "Class Not Found",
         )
 
-    stmt = select(GroupRole).where(
-        GroupRole.class_id == class_id
-    )
+    stmt = select(GroupRole).where(GroupRole.class_id == class_id)
 
     with db() as session:
         result = session.execute(stmt).scalars().all()
@@ -51,12 +54,9 @@ def get_role_list(request, class_id: int):
 
 @role_bp.route("/class/<class_id:int>/role/create", methods=["POST"])
 @need_login()
-@need_role([
-    UserType.admin,
-    UserType.teacher
-])
+@need_role([UserType.admin, UserType.teacher])
 @validate(json=CreateGroupRoleRequest)
-def create_class_role(request, class_id:int, body:CreateGroupRoleRequest):
+def create_class_role(request, class_id: int, body: CreateGroupRoleRequest):
     db = request.app.ctx.db
 
     if not has_class_access(request, class_id):

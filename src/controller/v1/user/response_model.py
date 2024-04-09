@@ -10,4 +10,3 @@ class MeUserResponse(BaseResponse):
     """
 
     data: UserSchema = Field(..., description="用户信息")
-

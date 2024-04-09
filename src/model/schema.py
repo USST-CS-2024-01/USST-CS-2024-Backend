@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import List, Optional
-from sanic_ext import openapi
+
 from pydantic import BaseModel
+from sanic_ext import openapi
 
 from .enum import (
     UserType,
@@ -19,11 +20,18 @@ from .enum import (
 )
 
 
+def _datetime_to_timestamp(v: datetime) -> int:
+    try:
+        return int(v.timestamp())
+    except Exception as e:
+        return 0
+
+
 class BaseJsonAbleModel(BaseModel):
     class Config:
         from_attributes = True
         json_encoders = {
-            datetime: lambda v: int(v.timestamp()),
+            datetime: _datetime_to_timestamp,
             UserType: lambda v: v.value,
             AccountStatus: lambda v: v.value,
             AnnouncementReceiverType: lambda v: v.value,
@@ -275,3 +283,10 @@ class ConfigSchema(BaseJsonAbleModel):
     key: str
     value: str
     update_time: datetime
+
+
+class TaskGroupMemberScoreSchema(BaseJsonAbleModel):
+    task_id: int
+    group_id: int
+    group_manager_score: Optional[dict] = None
+    group_member_scores: Optional[str] = None

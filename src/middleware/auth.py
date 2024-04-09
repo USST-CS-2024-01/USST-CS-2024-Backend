@@ -65,7 +65,9 @@ def need_login() -> Callable[[T], T]:
                     return ErrorResponse.new_error(
                         code=401, message="Unauthorized", detail="Invalid session ID"
                     )
-                await asyncio.create_task(cache.set_pickle(session_id, user, expire=3600))
+                await asyncio.create_task(
+                    cache.set_pickle(session_id, user, expire=3600)
+                )
                 await asyncio.create_task(
                     cache.set("session_no_check:" + session_id, 1, expire=60)
                 )
@@ -82,9 +84,7 @@ def need_login() -> Callable[[T], T]:
     return decorator  # type: ignore
 
 
-def need_role(
-        roles: List[UserType]
-) -> Callable[[T], T]:
+def need_role(roles: List[UserType]) -> Callable[[T], T]:
     """
     Decorator to require role
     :param roles: List of roles

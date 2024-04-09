@@ -9,7 +9,12 @@ from middleware.auth import need_login
 from middleware.validator import validate
 from model import Class, ClassMember, Task, GroupRole
 from model.enum import UserType
-from model.response_model import BaseDataResponse, BaseListResponse, BaseResponse, ErrorResponse
+from model.response_model import (
+    BaseDataResponse,
+    BaseListResponse,
+    BaseResponse,
+    ErrorResponse,
+)
 from model.schema import ClassSchema, TaskSchema
 from service.class_ import has_class_access
 from util.string import timestamp_to_datetime
@@ -82,12 +87,9 @@ def create_class_task(request, class_id: int, body: CreateTaskRequest):
 
     # 需要判定角色ID是否属于该班级
     check_role_stmt = (
-        select(GroupRole).where(
-            and_(
-                GroupRole.class_id == class_id,
-                GroupRole.id == new.specified_role
-            )
-        ).limit(1)
+        select(GroupRole)
+        .where(and_(GroupRole.class_id == class_id, GroupRole.id == new.specified_role))
+        .limit(1)
     )
 
     new.class_id = class_id

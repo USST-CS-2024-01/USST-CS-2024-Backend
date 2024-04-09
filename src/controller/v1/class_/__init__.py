@@ -8,7 +8,12 @@ from middleware.auth import need_login
 from middleware.validator import validate
 from model import Class, ClassMember
 from model.enum import UserType
-from model.response_model import BaseDataResponse, BaseListResponse, BaseResponse, ErrorResponse
+from model.response_model import (
+    BaseDataResponse,
+    BaseListResponse,
+    BaseResponse,
+    ErrorResponse,
+)
 from model.schema import ClassSchema
 
 class_bp = Blueprint("class", url_prefix="/class")
@@ -90,13 +95,15 @@ def get_class_list(request, query: ListClassRequest):
 def get_class_info(request, class_id: int):
     db = request.app.ctx.db
 
-    stmt = select(Class).where(and_(
-        Class.id == class_id,
-        or_(
-            Class.members.any(id=request.ctx.user.id),
-            request.ctx.user.user_type == UserType.admin,
+    stmt = select(Class).where(
+        and_(
+            Class.id == class_id,
+            or_(
+                Class.members.any(id=request.ctx.user.id),
+                request.ctx.user.user_type == UserType.admin,
+            ),
         )
-    ))
+    )
 
     with db() as session:
         result = session.execute(stmt).scalar_one_or_none()
@@ -126,6 +133,6 @@ def get_class_info(request, class_id: int):
             status=result.status,
             stu_count=stu_count,
             tea_list=tea_list,
-            stu_list=stu_list
+            stu_list=stu_list,
         )
     )

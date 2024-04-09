@@ -58,8 +58,11 @@ def mask_string(text: str) -> str:
     if len(text) < 8:
         return text[0] + "*" * (len(text) - 1)
     if ":" in text:
-        return text.split(":")[0] + ":" + text.split(":")[1][:8] + "*" * (
-                len(text.split(":")[1]) - 8
+        return (
+            text.split(":")[0]
+            + ":"
+            + text.split(":")[1][:8]
+            + "*" * (len(text.split(":")[1]) - 8)
         )
     return text[:8] + "*" * (len(text) - 8)
 
@@ -74,4 +77,4 @@ def timestamp_to_datetime(timestamp: int) -> str:
     Returns:
     A string representing the datetime in MySQL format.
     """
-    return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
