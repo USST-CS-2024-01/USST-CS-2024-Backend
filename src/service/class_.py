@@ -96,7 +96,6 @@ def generate_new_class(db, class_name: str, class_description: str = None) -> Cl
                 class_id=new_class.id,
                 name=task.name,
                 content=task.content,
-                attached_files=[],
                 publish_time=task.publish_time,
                 deadline=task.deadline,
                 grade_percentage=task.grade_percentage,

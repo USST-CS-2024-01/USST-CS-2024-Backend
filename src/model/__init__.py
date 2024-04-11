@@ -233,6 +233,7 @@ class GroupMemberRole(Base):
     role_id = Column(
         Integer,
         ForeignKey("group_role.id", ondelete="CASCADE", onupdate="CASCADE"),
+        primary_key=True,
     )
 
     __table_args__ = (UniqueConstraint("class_member_id", "role_id"),)
@@ -251,6 +252,7 @@ class Group(Base):
     status = Column(Enum(GroupStatus, name="group_status"), nullable=False, index=True)
 
     members = relationship("ClassMember", backref="group")
+    clazz = relationship("Class", backref="groups")
 
     # 代表了当前组的进度，指向以班级为范围的任务ID
     current_task_id = Column(
