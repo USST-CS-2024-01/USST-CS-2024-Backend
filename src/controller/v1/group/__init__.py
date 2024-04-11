@@ -29,7 +29,9 @@ group_bp = Blueprint("group")
 @group_bp.route("/class/<class_id:int>/group/start", methods=["POST"])
 @openapi.summary("开始分组")
 @openapi.tag("分组接口")
-@openapi.description("将班级状态推进为分组中状态，此时学生可以进行分组操作，老师可以进行分组设置和审核，班级状态的变更无法回退，需要谨慎操作。")
+@openapi.description(
+    "将班级状态推进为分组中状态，此时学生可以进行分组操作，老师可以进行分组设置和审核，班级状态的变更无法回退，需要谨慎操作。"
+)
 @openapi.response(
     200,
     description="成功",
