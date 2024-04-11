@@ -54,7 +54,7 @@ class BaseJsonAbleModel(BaseModel):
         return super().json(**kwargs)
 
 
-@openapi.component
+@openapi.component()
 class UserSchema(BaseJsonAbleModel):
     id: int
     username: str
