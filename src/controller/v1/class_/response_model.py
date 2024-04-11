@@ -1,11 +1,13 @@
 from typing import Optional
 
 from pydantic import BaseModel, Field
+from sanic_ext.extensions.openapi import openapi
 
 from model.response_model import BaseResponse
 from model.schema import UserSchema
 
 
+@openapi.component()
 class ClassReturnItem(BaseModel):
     id: int = Field(..., description="班级ID")
     name: str = Field(..., description="班级名称")
@@ -21,4 +23,4 @@ class ClassReturnItem(BaseModel):
 class ClassMemberOperationResult(BaseResponse):
     success_count: int = Field(..., description="成功数量")
     failed_count: int = Field(..., description="失败数量")
-    failed_list: list[UserSchema] = Field([], description="失败列表")
+    failed_list: list[int] = Field([], description="失败列表")

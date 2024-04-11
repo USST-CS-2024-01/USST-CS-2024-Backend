@@ -16,13 +16,14 @@ from controller.v1.class_.response_model import (
 from middleware.auth import need_login, need_role
 from middleware.validator import validate
 from model import Class, ClassMember, User
-from model.enum import UserType
+from model.enum import UserType, ClassStatus
 from model.response_model import (
     BaseDataResponse,
     BaseListResponse,
     ErrorResponse,
 )
 from model.schema import UserSchema, ClassMemberSchema
+from util.parameter import generate_parameters_from_pydantic
 
 class_bp = Blueprint("class", url_prefix="/class")
 
@@ -30,6 +31,16 @@ class_bp = Blueprint("class", url_prefix="/class")
 @class_bp.route("/list", methods=["GET"])
 @openapi.summary("获取班级列表")
 @openapi.tag("班级接口")
+@openapi.definition(parameter=generate_parameters_from_pydantic(ListClassRequest))
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[ClassReturnItem].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @validate(query=ListClassRequest)
 @need_login()
 def get_class_list(request, query: ListClassRequest):
@@ -100,6 +111,22 @@ def get_class_list(request, query: ListClassRequest):
 @class_bp.route("/create", methods=["POST"])
 @openapi.summary("创建班级")
 @openapi.tag("班级接口")
+@openapi.body(
+    {
+        "application/json": ChangeClassInfoRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[ClassReturnItem].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 @need_role([UserType.admin])
 @validate(json=ChangeClassInfoRequest)
@@ -127,6 +154,15 @@ def create_class(request, body: ChangeClassInfoRequest):
 @class_bp.route("/<class_id:int>", methods=["GET"])
 @openapi.summary("获取班级信息")
 @openapi.tag("班级接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[ClassReturnItem].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 def get_class_info(request, class_id: int):
     db = request.app.ctx.db
@@ -151,7 +187,7 @@ def get_class_info(request, class_id: int):
 
         stu_list = (
             session.query(ClassMember)
-            .filter(ClassMember.class_id == class_id, ClassMember.is_teacher == False)
+            .filter(ClassMember.class_id == class_id, ClassMember.is_teacher.is_(False))
             .all()
         )
         stu_count = len(stu_list)
@@ -183,6 +219,22 @@ def get_class_info(request, class_id: int):
 @openapi.summary("修改班级信息")
 @openapi.tag("班级接口")
 @openapi.description("修改班级名称、班级描述等基本信息，不包括对班级成员、任务等的修改")
+@openapi.body(
+    {
+        "application/json": ChangeClassInfoRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[ClassReturnItem].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=ChangeClassInfoRequest)
@@ -221,6 +273,16 @@ def update_class_info(request, class_id: int, body: ChangeClassInfoRequest):
 @class_bp.route("/<class_id:int>", methods=["DELETE"])
 @openapi.summary("删除班级")
 @openapi.tag("班级接口")
+@openapi.description("删除班级，不可恢复，这是一个危险操作，建议在前端进行二次确认")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 @need_role([UserType.admin])
 def delete_class(request, class_id: int):
@@ -242,6 +304,15 @@ def delete_class(request, class_id: int):
 @class_bp.route("/<class_id:int>/member", methods=["GET"])
 @openapi.summary("获取班级成员")
 @openapi.tag("班级接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[ClassMemberSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 def get_class_member(request, class_id: int):
     db = request.app.ctx.db
@@ -256,14 +327,39 @@ def get_class_member(request, class_id: int):
         result = (
             session.query(ClassMember).filter(ClassMember.class_id == class_id).all()
         )
-        return BaseDataResponse.new_data(
-            [ClassMemberSchema.model_validate(item) for item in result]
-        )
+        result = [ClassMemberSchema.model_validate(x) for x in result]
+
+    return BaseListResponse(
+        data=result, page=1, page_size=len(result), total=len(result)
+    ).json_response()
 
 
 @class_bp.route("/<class_id:int>/member", methods=["POST"])
-@openapi.summary("添加班级成员")
+@openapi.summary("批量添加班级成员")
 @openapi.tag("班级接口")
+@openapi.description(
+    """
+批量添加班级成员，需要管理员或教师权限。
+- 仅当班级状态为`ClassStatus.not_started`或者`ClassStatus.grouping`时，才能添加成员。
+- 一旦班级状态变更为更后续状态，将无法对成员进行修改。
+"""
+)
+@openapi.body(
+    {
+        "application/json": AddClassMemberRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": ClassMemberOperationResult.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=AddClassMemberRequest)
@@ -276,10 +372,16 @@ def add_class_member(request, class_id: int, body: AddClassMemberRequest):
             "Can not modify the default class",
         )
 
-    if not service.class_.has_class_access(request, class_id):
+    clazz = service.class_.has_class_access(request, class_id)
+    if not clazz:
         return ErrorResponse.new_error(
             404,
             "Class Not Found",
+        )
+    if clazz.status != ClassStatus.not_started and clazz.status != ClassStatus.grouping:
+        return ErrorResponse.new_error(
+            400,
+            "Only can add member when class status is not_started or grouping",
         )
 
     result = ClassMemberOperationResult(
@@ -328,8 +430,31 @@ def add_class_member(request, class_id: int, body: AddClassMemberRequest):
 
 
 @class_bp.route("/<class_id:int>/member", methods=["DELETE"])
-@openapi.summary("删除班级成员")
+@openapi.summary("批量删除班级成员")
 @openapi.tag("班级接口")
+@openapi.description(
+    """
+批量删除班级成员，需要管理员或教师权限。
+- 仅当班级状态为`ClassStatus.not_started`或者`ClassStatus.grouping`时，才能删除成员。
+- 一旦班级状态变更为更后续状态，将无法对成员进行修改。
+"""
+)
+@openapi.body(
+    {
+        "application/json": RemoveClassMemberRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": ClassMemberOperationResult.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=RemoveClassMemberRequest)
@@ -342,10 +467,16 @@ def remove_class_member(request, class_id: int, body: RemoveClassMemberRequest):
             "Can not modify the default class",
         )
 
-    if not service.class_.has_class_access(request, class_id):
+    clazz = service.class_.has_class_access(request, class_id)
+    if not clazz:
         return ErrorResponse.new_error(
             404,
             "Class Not Found",
+        )
+    if clazz.status != ClassStatus.not_started and clazz.status != ClassStatus.grouping:
+        return ErrorResponse.new_error(
+            400,
+            "Only can remove member when class status is not_started or grouping",
         )
 
     result = ClassMemberOperationResult(
@@ -362,7 +493,7 @@ def remove_class_member(request, class_id: int, body: RemoveClassMemberRequest):
             )
         )
         if request.ctx.user.user_type != UserType.admin:
-            member_id_list = member_id_list.where(ClassMember.is_teacher == False)
+            member_id_list = member_id_list.where(ClassMember.is_teacher.is_(False))
 
         member_id_list = session.execute(member_id_list).scalars().all()
         member_id_list = [x for x in member_id_list]
