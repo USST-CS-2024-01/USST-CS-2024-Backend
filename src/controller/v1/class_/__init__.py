@@ -43,7 +43,7 @@ class_bp = Blueprint("class", url_prefix="/class")
 )
 @validate(query=ListClassRequest)
 @need_login()
-def get_class_list(request, query: ListClassRequest):
+async def get_class_list(request, query: ListClassRequest):
     db = request.app.ctx.db
 
     # 选择班级信息，包含成员数量、教师列表
@@ -130,7 +130,7 @@ def get_class_list(request, query: ListClassRequest):
 @need_login()
 @need_role([UserType.admin])
 @validate(json=ChangeClassInfoRequest)
-def create_class(request, body: ChangeClassInfoRequest):
+async def create_class(request, body: ChangeClassInfoRequest):
     db = request.app.ctx.db
 
     try:
@@ -164,7 +164,7 @@ def create_class(request, body: ChangeClassInfoRequest):
     },
 )
 @need_login()
-def get_class_info(request, class_id: int):
+async def get_class_info(request, class_id: int):
     db = request.app.ctx.db
 
     stmt = select(Class).where(
@@ -238,7 +238,7 @@ def get_class_info(request, class_id: int):
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=ChangeClassInfoRequest)
-def update_class_info(request, class_id: int, body: ChangeClassInfoRequest):
+async def update_class_info(request, class_id: int, body: ChangeClassInfoRequest):
     db = request.app.ctx.db
 
     if not service.class_.has_class_access(request, class_id):
@@ -285,7 +285,7 @@ def update_class_info(request, class_id: int, body: ChangeClassInfoRequest):
 )
 @need_login()
 @need_role([UserType.admin])
-def delete_class(request, class_id: int):
+async def delete_class(request, class_id: int):
     db = request.app.ctx.db
 
     if not service.class_.has_class_access(request, class_id):
@@ -314,7 +314,7 @@ def delete_class(request, class_id: int):
     },
 )
 @need_login()
-def get_class_member(request, class_id: int):
+async def get_class_member(request, class_id: int):
     db = request.app.ctx.db
 
     if not service.class_.has_class_access(request, class_id):
@@ -363,7 +363,7 @@ def get_class_member(request, class_id: int):
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=AddClassMemberRequest)
-def add_class_member(request, class_id: int, body: AddClassMemberRequest):
+async def add_class_member(request, class_id: int, body: AddClassMemberRequest):
     db = request.app.ctx.db
 
     if class_id == 1:
@@ -458,7 +458,7 @@ def add_class_member(request, class_id: int, body: AddClassMemberRequest):
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=RemoveClassMemberRequest)
-def remove_class_member(request, class_id: int, body: RemoveClassMemberRequest):
+async def remove_class_member(request, class_id: int, body: RemoveClassMemberRequest):
     db = request.app.ctx.db
 
     if class_id == 1:

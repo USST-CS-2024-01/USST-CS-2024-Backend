@@ -1,6 +1,6 @@
 from sanic import Sanic
 
-INJECTION_MODULES = ["sql_alchemy_attachment", "redis_attachment"]
+INJECTION_MODULES = ["sql_alchemy_attachment", "redis_attachment", "goflet_attachment"]
 
 
 def inject_listener(app: Sanic):

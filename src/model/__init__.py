@@ -267,6 +267,7 @@ class File(Base):
     __tablename__ = "file"
     id = Column(Integer, primary_key=True)
     name = Column(String(500), nullable=False, index=True)
+    file_key = Column(String(1000), nullable=False)
     file_type = Column(Enum(FileType, name="file_type"), nullable=False, index=True)
     file_size = Column(Integer, nullable=False, index=True)
     owner_type = Column(

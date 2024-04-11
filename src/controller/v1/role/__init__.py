@@ -42,7 +42,7 @@ role_bp = Blueprint("role")
     },
 )
 @need_login()
-def get_role_list(request, class_id: int):
+async def get_role_list(request, class_id: int):
     db = request.app.ctx.db
 
     if not has_class_access(request, class_id):
@@ -92,7 +92,7 @@ def get_role_list(request, class_id: int):
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=CreateGroupRoleRequest)
-def create_class_role(request, class_id: int, body: CreateGroupRoleRequest):
+async def create_class_role(request, class_id: int, body: CreateGroupRoleRequest):
     db = request.app.ctx.db
 
     clazz = has_class_access(request, class_id)
@@ -159,7 +159,7 @@ def create_class_role(request, class_id: int, body: CreateGroupRoleRequest):
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=CreateGroupRoleRequest)
-def update_class_role(
+async def update_class_role(
     request, class_id: int, role_id: int, body: CreateGroupRoleRequest
 ):
     db = request.app.ctx.db
@@ -229,7 +229,7 @@ def update_class_role(
 )
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
-def delete_class_role(request, class_id: int, role_id: int):
+async def delete_class_role(request, class_id: int, role_id: int):
     db = request.app.ctx.db
 
     clazz = has_class_access(request, class_id)

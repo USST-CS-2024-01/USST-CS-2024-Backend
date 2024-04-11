@@ -27,7 +27,7 @@ task_bp = Blueprint("task")
 @openapi.tag("任务接口")
 @openapi.description("获取班级任务列表")
 @need_login()
-def list_class_tasks(request, class_id: int):
+async def list_class_tasks(request, class_id: int):
     """
     获取班级任务列表
     :param request: Request
@@ -62,7 +62,7 @@ def list_class_tasks(request, class_id: int):
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=CreateTaskRequest)
-def create_class_task(request, class_id: int, body: CreateTaskRequest):
+async def create_class_task(request, class_id: int, body: CreateTaskRequest):
     """
     创建班级任务
     :param request: Request
@@ -121,13 +121,11 @@ def create_class_task(request, class_id: int, body: CreateTaskRequest):
 @task_bp.route("/class/<class_id:int>/task/sequence", methods=["POST"])
 @openapi.summary("设置任务顺序")
 @openapi.tag("任务接口")
-@openapi.description(
-    "设置任务顺序，传入任务ID列表，按照列表顺序设置任务顺序，需要将该班级下的所有任务ID传入，且不能出现重复ID"
-)
+@openapi.description("设置任务顺序，传入任务ID列表，按照列表顺序设置任务顺序，需要将该班级下的所有任务ID传入，且不能出现重复ID")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=SetTaskSequenceRequest)
-def set_task_sequence(request, class_id: int, body: SetTaskSequenceRequest):
+async def set_task_sequence(request, class_id: int, body: SetTaskSequenceRequest):
     """
     设置任务顺序
     :param request: Request

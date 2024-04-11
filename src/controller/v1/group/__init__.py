@@ -43,7 +43,7 @@ group_bp = Blueprint("group")
 )
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
-def start_group(request, class_id: int):
+async def start_group(request, class_id: int):
     db = request.app.ctx.db
 
     clazz = service.class_.has_class_access(request, class_id)
@@ -94,7 +94,7 @@ def start_group(request, class_id: int):
     },
 )
 @need_login()
-def get_group_list(request, class_id: int):
+async def get_group_list(request, class_id: int):
     db = request.app.ctx.db
 
     if not service.class_.has_class_access(request, class_id):
@@ -145,7 +145,7 @@ def get_group_list(request, class_id: int):
 )
 @need_login()
 @validate(json=CreateGroupRequest)
-def create_group(request, class_id: int, body: CreateGroupRequest):
+async def create_group(request, class_id: int, body: CreateGroupRequest):
     # 这个参数只有老师可以传
     if request.ctx.user.user_type == UserType.student:
         body.leader = request.ctx.user.id
@@ -260,7 +260,7 @@ def create_group(request, class_id: int, body: CreateGroupRequest):
     },
 )
 @need_login()
-def join_group(request, class_id: int, group_id: int, class_member_id: int):
+async def join_group(request, class_id: int, group_id: int, class_member_id: int):
     db = request.app.ctx.db
 
     clazz = service.class_.has_class_access(request, class_id)
@@ -399,7 +399,7 @@ def join_group(request, class_id: int, group_id: int, class_member_id: int):
     },
 )
 @need_login()
-def leave_group(request, class_id: int, group_id: int, class_member_id: int):
+async def leave_group(request, class_id: int, group_id: int, class_member_id: int):
     db = request.app.ctx.db
 
     # 判断用户是否有班级访问权限
@@ -534,7 +534,7 @@ def leave_group(request, class_id: int, group_id: int, class_member_id: int):
     },
 )
 @need_login()
-def approve_group_member(request, class_id: int, group_id: int, class_member_id: int):
+async def approve_group_member(request, class_id: int, group_id: int, class_member_id: int):
     db = request.app.ctx.db
 
     # 判断用户是否有班级访问权限
@@ -664,7 +664,7 @@ def approve_group_member(request, class_id: int, group_id: int, class_member_id:
     },
 )
 @need_login()
-def get_group_member(request, class_id: int, group_id: int, class_member_id: int):
+async def get_group_member(request, class_id: int, group_id: int, class_member_id: int):
     db = request.app.ctx.db
 
     # 判断用户是否有班级访问权限
@@ -724,7 +724,7 @@ def get_group_member(request, class_id: int, group_id: int, class_member_id: int
 )
 @need_login()
 @validate(json=UpdateGroupMemberRequest)
-def update_group_member(
+async def update_group_member(
     request,
     class_id: int,
     group_id: int,
@@ -858,7 +858,7 @@ def update_group_member(
     },
 )
 @need_login()
-def get_group(request, class_id: int, group_id: int):
+async def get_group(request, class_id: int, group_id: int):
     db = request.app.ctx.db
 
     # 判断用户是否有班级访问权限
@@ -908,7 +908,7 @@ def get_group(request, class_id: int, group_id: int):
 )
 @need_login()
 @validate(json=UpdateGroupRequest)
-def update_group(request, class_id: int, group_id: int, body: UpdateGroupRequest):
+async def update_group(request, class_id: int, group_id: int, body: UpdateGroupRequest):
     db = request.app.ctx.db
 
     if body.group_name is None:
@@ -957,7 +957,7 @@ def update_group(request, class_id: int, group_id: int, body: UpdateGroupRequest
     },
 )
 @need_login()
-def delete_group(request, class_id: int, group_id: int):
+async def delete_group(request, class_id: int, group_id: int):
     db = request.app.ctx.db
 
     # 判断用户是否有班级访问权限
@@ -1039,7 +1039,7 @@ def delete_group(request, class_id: int, group_id: int):
 )
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
-def approve_group(request, class_id: int, group_id: int):
+async def approve_group(request, class_id: int, group_id: int):
     db = request.app.ctx.db
 
     # 判断用户是否有班级访问权限
@@ -1089,7 +1089,7 @@ def approve_group(request, class_id: int, group_id: int):
 )
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
-def revoke_group_approval(request, class_id: int, group_id: int):
+async def revoke_group_approval(request, class_id: int, group_id: int):
     db = request.app.ctx.db
 
     # 判断用户是否有班级访问权限
