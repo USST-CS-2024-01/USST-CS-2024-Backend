@@ -48,7 +48,7 @@ def list_class_tasks(request, class_id: int):
     with db() as session:
         result = session.execute(stmt).scalars().all()
         return BaseListResponse(
-            data=[TaskSchema.from_orm(item) for item in result],
+            data=[TaskSchema.model_validate(item) for item in result],
             total=len(result),
             page=1,
             page_size=len(result),
@@ -109,7 +109,7 @@ def create_class_task(request, class_id: int, body: CreateTaskRequest):
         session.commit()
         # 刷新对象，以获取数据库中的所有字段
         session.refresh(new)
-        new_pydantic = TaskSchema.from_orm(new)
+        new_pydantic = TaskSchema.model_validate(new)
 
     return BaseDataResponse(
         code=200,

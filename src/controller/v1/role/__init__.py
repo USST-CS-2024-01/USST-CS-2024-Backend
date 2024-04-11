@@ -47,7 +47,7 @@ def get_role_list(request, class_id: int):
     with db() as session:
         result = session.execute(stmt).scalars().all()
         return BaseListResponse(
-            data=[GroupRoleSchema.from_orm(item) for item in result],
+            data=[GroupRoleSchema.model_validate(item) for item in result],
             total=len(result),
             page=1,
             page_size=len(result),
@@ -83,7 +83,7 @@ def create_class_role(request, class_id: int, body: CreateGroupRoleRequest):
         sess.commit()
         # 刷新对象，以获取数据库中的所有字段
         sess.refresh(new_role)
-        new_role_pydantic = GroupRoleSchema.from_orm(new_role)
+        new_role_pydantic = GroupRoleSchema.model_validate(new_role)
 
     return BaseDataResponse(
         code=200,

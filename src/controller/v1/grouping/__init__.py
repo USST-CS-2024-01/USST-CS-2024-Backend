@@ -24,9 +24,7 @@ grouping_bp = Blueprint("grouping")
 @grouping_bp.route("/class/<class_id:int>/grouping/start", methods=["POST"])
 @openapi.summary("开始分组")
 @openapi.tag("分组接口")
-@openapi.description(
-    "将班级状态推进为分组中状态，此时学生可以进行分组操作，老师可以进行分组设置和审核，班级状态的变更无法回退，需要谨慎操作。"
-)
+@openapi.description("将班级状态推进为分组中状态，此时学生可以进行分组操作，老师可以进行分组设置和审核，班级状态的变更无法回退，需要谨慎操作。")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 def start_grouping(request, class_id: int):
@@ -82,7 +80,7 @@ def get_grouping_list(request, class_id: int):
         # 加载信息，由于使用了lazyLoad，会导致GroupSchema中的members解析会出现问题
 
     return BaseListResponse(
-        data=[GroupSchema.from_orm(group) for group in groups],
+        data=[GroupSchema.model_validate(group) for group in groups],
         total=len(groups),
         page=1,
         page_size=len(groups),

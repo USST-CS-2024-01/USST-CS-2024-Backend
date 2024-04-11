@@ -81,7 +81,7 @@ def get_class_list(request, query: ListClassRequest):
                 .limit(3)
                 .all()
             )
-            tea_list = [UserSchema.from_orm(x.user) for x in tea_list]
+            tea_list = [UserSchema.model_validate(x.user) for x in tea_list]
             result_list.append(
                 ClassReturnItem(
                     id=item.id,
@@ -157,12 +157,12 @@ def get_class_info(request, class_id: int):
         stu_count = len(stu_list)
         tea_list = (
             session.query(ClassMember)
-            .filter(ClassMember.is_teacher == True, ClassMember.class_id == class_id)
+            .filter(ClassMember.is_teacher is True, ClassMember.class_id == class_id)
             .all()
         )
 
-        stu_list = [UserSchema.from_orm(x.user) for x in stu_list]
-        tea_list = [UserSchema.from_orm(x.user) for x in tea_list]
+        stu_list = [UserSchema.model_validate(x.user) for x in stu_list]
+        tea_list = [UserSchema.model_validate(x.user) for x in tea_list]
 
     return BaseDataResponse.new_data(
         ClassReturnItem(

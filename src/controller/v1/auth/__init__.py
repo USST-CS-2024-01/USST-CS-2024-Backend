@@ -181,7 +181,7 @@ async def login(request, body: LoginRequest):
         code=200,
         message="ok",
         session_id=login_session_id,
-        user=UserSchema.from_orm(user),
+        user=UserSchema.model_validate(user),
     )
 
     return resp.json_response()

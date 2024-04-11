@@ -36,7 +36,7 @@ user_bp = Blueprint("user", url_prefix="/user")
 @need_login()
 async def get_user_info(request):
     return MeUserResponse(
-        code=200, message="ok", data=UserSchema.from_orm(request.ctx.user)
+        code=200, message="ok", data=UserSchema.model_validate(request.ctx.user)
     ).json_response()
 
 
@@ -82,7 +82,7 @@ async def get_user_list(request, query: ListUserRequest):
         users = sess.execute(stmt).scalars().all()
         total = sess.execute(count_stmt).scalar()
 
-    user_list = [UserSchema.from_orm(user) for user in users]
+    user_list = [UserSchema.model_validate(user) for user in users]
 
     return BaseListResponse(
         code=200,
@@ -140,7 +140,7 @@ async def update_user_info(request, body: MeUserUpdateRequest):
     return MeUserResponse(
         code=200,
         message="ok",
-        data=UserSchema.from_orm(user_service.get_user(db, user_id=user.id)),
+        data=UserSchema.model_validate(user_service.get_user(db, user_id=user.id)),
     ).json_response()
 
 
@@ -169,7 +169,7 @@ async def get_user(request, user_id):
         return ErrorResponse.new_error(code=404, message="用户不存在")
 
     return MeUserResponse(
-        code=200, message="ok", data=UserSchema.from_orm(user)
+        code=200, message="ok", data=UserSchema.model_validate(user)
     ).json_response()
 
 
@@ -265,7 +265,7 @@ async def update_user(request, user_id, body: UserUpdateRequest):
     return MeUserResponse(
         code=200,
         message="ok",
-        data=UserSchema.from_orm(user_service.get_user(db, user_id=user_id)),
+        data=UserSchema.model_validate(user_service.get_user(db, user_id=user_id)),
     ).json_response()
 
 
@@ -330,7 +330,7 @@ async def create_user(request, body: UserUpdateRequest):
         sess.commit()
         # 刷新对象，以获取数据库中的所有字段
         sess.refresh(new_user)
-        new_user_pydantic = UserSchema.from_orm(new_user)
+        new_user_pydantic = UserSchema.model_validate(new_user)
 
     return MeUserResponse(
         code=200,
