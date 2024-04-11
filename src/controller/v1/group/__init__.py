@@ -10,6 +10,7 @@ import service.group
 from controller.v1.group.request_model import (
     CreateGroupRequest,
     UpdateGroupMemberRequest,
+    UpdateGroupRequest,
 )
 from middleware.auth import need_login, need_role
 from middleware.validator import validate
@@ -29,6 +30,15 @@ group_bp = Blueprint("group")
 @openapi.summary("开始分组")
 @openapi.tag("分组接口")
 @openapi.description("将班级状态推进为分组中状态，此时学生可以进行分组操作，老师可以进行分组设置和审核，班级状态的变更无法回退，需要谨慎操作。")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 def start_group(request, class_id: int):
@@ -60,6 +70,15 @@ def start_group(request, class_id: int):
 @group_bp.route("/class/<class_id:int>/group/list", methods=["GET"])
 @openapi.summary("查询分组列表")
 @openapi.tag("分组接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[GroupSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 def get_group_list(request, class_id: int):
     db = request.app.ctx.db
@@ -94,6 +113,22 @@ def get_group_list(request, class_id: int):
 @group_bp.route("/class/<class_id:int>/group/create", methods=["POST"])
 @openapi.summary("创建分组")
 @openapi.tag("分组接口")
+@openapi.body(
+    {
+        "application/json": CreateGroupRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 @validate(json=CreateGroupRequest)
 def create_group(request, class_id: int, body: CreateGroupRequest):
@@ -196,10 +231,19 @@ def create_group(request, class_id: int, body: CreateGroupRequest):
 @openapi.tag("分组接口")
 @openapi.description(
     """申请加入一个分组，或者组长邀请特定成员加入分组，或者教师将特定成员加入分组。
-若是自行申请加入分组，则class_member_id必须为当前用户在班级中的id；
-若是组长邀请特定成员加入分组，则class_member_id必须为被邀请成员在班级中的id。
-若用户已经在一个组中，则无法加入新组；若用户先前申请了加入组，或者被邀请加入组，则再次申请时，
+- 若是自行申请加入分组，则class_member_id必须为当前用户在班级中的id；
+- 若是组长邀请特定成员加入分组，则class_member_id必须为被邀请成员在班级中的id。
+- 若用户已经在一个组中，则无法加入新组；若用户先前申请了加入组，或者被邀请加入组，则再次申请时，
 无法被邀请加入，但是本人的申请可以覆盖之前的邀请。"""
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
 )
 @need_login()
 def join_group(request, class_id: int, group_id: int, class_member_id: int):
@@ -331,6 +375,15 @@ def join_group(request, class_id: int, group_id: int, class_member_id: int):
     """退出一个分组，或者组长将特定成员移出分组，或者教师将特定成员移出分组。
 若用户已经在一个组中，则无法退出；若用户先前申请了加入组，或者被邀请加入组，则退出时，将会取消之前的申请。"""
 )
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 def leave_group(request, class_id: int, group_id: int, class_member_id: int):
     db = request.app.ctx.db
@@ -457,6 +510,15 @@ def leave_group(request, class_id: int, group_id: int, class_member_id: int):
 - 若是尚未加入组的学生调用，则该学生需要满足自己的分组状态为`GroupMemberRoleStatus.member_review`，且该学生的`group_id`为目标分组的`id`。
 在由教师或管理员调用时，则无需上述校验，可以直接将特定成员加入分组。"""
 )
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 def approve_group_member(request, class_id: int, group_id: int, class_member_id: int):
     db = request.app.ctx.db
@@ -578,6 +640,15 @@ def approve_group_member(request, class_id: int, group_id: int, class_member_id:
 )
 @openapi.summary("查询分组成员信息")
 @openapi.tag("分组接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[ClassMemberSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 def get_group_member(request, class_id: int, group_id: int, class_member_id: int):
     db = request.app.ctx.db
@@ -620,6 +691,22 @@ def get_group_member(request, class_id: int, group_id: int, class_member_id: int
 
 仅组长可以修改组员信息，组员必须是已经加入组的组员。
 """
+)
+@openapi.body(
+    {
+        "application/json": UpdateGroupMemberRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
 )
 @need_login()
 @validate(json=UpdateGroupMemberRequest)
@@ -743,6 +830,98 @@ def update_group_member(
 
 @group_bp.route(
     "/class/<class_id:int>/group/<group_id:int>",
+    methods=["GET"],
+)
+@openapi.summary("查询分组信息")
+@openapi.tag("分组接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[GroupSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@need_login()
+def get_group(request, class_id: int, group_id: int):
+    db = request.app.ctx.db
+
+    # 判断用户是否有班级访问权限
+    group, self_class_member, is_manager = service.group.have_group_access(
+        request, class_id, group_id
+    )
+
+    if not group:
+        return ErrorResponse.new_error(404, "Group not found.")
+
+    with db() as session:
+        session.add(group)
+        return BaseDataResponse(
+            data=GroupSchema.model_validate(group),
+        ).json_response()
+
+
+@group_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>",
+    methods=["PUT"],
+)
+@openapi.summary("修改分组信息")
+@openapi.tag("分组接口")
+@openapi.description(
+    """
+修改分组信息，可修改以下内容：
+- 分组名称；
+
+仅组长和教师可以修改分组信息。
+"""
+)
+@openapi.body(
+    {
+        "application/json": UpdateGroupRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@need_login()
+@validate(json=UpdateGroupRequest)
+def update_group(request, class_id: int, group_id: int, body: UpdateGroupRequest):
+    db = request.app.ctx.db
+
+    if body.group_name is None:
+        return ErrorResponse.new_error(400, "No data to update.")
+
+    # 判断用户是否有班级访问权限
+    group, self_class_member, is_manager = service.group.have_group_access(
+        request, class_id, group_id
+    )
+
+    if not group:
+        return ErrorResponse.new_error(404, "Group not found.")
+    if not is_manager:
+        return ErrorResponse.new_error(403, "You are not the leader of this group.")
+
+    with db() as session:
+        session.add(group)
+        group.name = body.group_name
+        session.commit()
+
+    return BaseDataResponse(
+        data=None,
+    ).json_response()
+
+
+@group_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>",
     methods=["DELETE"],
 )
 @openapi.summary("解散分组")
@@ -753,6 +932,15 @@ def update_group_member(
 - 只有在班级状态为`ClassStatus.grouping`时，才可以解散分组；
 - 只有在分组状态为`GroupStatus.pending`时，才可以解散分组。
 """
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
 )
 @need_login()
 def delete_group(request, class_id: int, group_id: int):
@@ -826,6 +1014,15 @@ def delete_group(request, class_id: int, group_id: int):
 - 分组审核后，该组将无法新增或删除成员，但可以修改成员的信息。
 """
 )
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 def approve_group(request, class_id: int, group_id: int):
@@ -866,6 +1063,15 @@ def approve_group(request, class_id: int, group_id: int):
 - 只有在班级状态为`ClassStatus.grouping`时，才可以撤销分组审核；
 - 只有在分组状态为`GroupStatus.normal`时，才可以撤销分组审核。
 """
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
 )
 @need_login()
 @need_role([UserType.admin, UserType.teacher])

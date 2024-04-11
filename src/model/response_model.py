@@ -1,4 +1,4 @@
-from typing import List, Optional, TypeVar
+from typing import List, Optional, TypeVar, Generic
 
 from pydantic import BaseModel, Field
 from sanic import HTTPResponse
@@ -28,7 +28,7 @@ class BaseResponse(BaseModel):
         return resp
 
 
-class BaseDataResponse(BaseResponse):
+class BaseDataResponse(BaseResponse, Generic[T]):
     """
     数据响应
     """
@@ -76,7 +76,7 @@ class ErrorResponse(BaseResponse):
         return JSONResponse(err_resp.dict(), status=code)
 
 
-class BaseListResponse(BaseResponse):
+class BaseListResponse(BaseResponse, Generic[T]):
     """
     列表响应
     """
