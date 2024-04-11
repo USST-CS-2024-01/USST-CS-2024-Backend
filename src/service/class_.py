@@ -44,7 +44,6 @@ def generate_new_class(db, class_name: str, class_description: str = None) -> Cl
         template_class = session.execute(stmt_template_class).scalar()
         if not template_class:
             raise ValueError("Template class not found.")
-        print("Template class found.")
 
         if class_description is None:
             class_description = template_class.description

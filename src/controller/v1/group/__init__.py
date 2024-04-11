@@ -58,8 +58,20 @@ def start_group(request, class_id: int):
         )
 
     with db() as session:
-        clazz.status = ClassStatus.grouping
         session.add(clazz)
+
+        # 检查组长角色是否设置，且只能有一个
+        leader_count = 0
+        for role in clazz.roles:
+            if role.is_manager:
+                leader_count += 1
+        if leader_count != 1:
+            return ErrorResponse.new_error(
+                400,
+                "Leader role was set incorrectly",
+            )
+
+        clazz.status = ClassStatus.grouping
         session.commit()
 
     return BaseDataResponse(

@@ -316,6 +316,7 @@ class Class(Base):
     )
 
     members = relationship("User", secondary="class_member", viewonly=True)
+    roles = relationship("GroupRole", backref="class_")
 
 
 class ClassMember(Base):
