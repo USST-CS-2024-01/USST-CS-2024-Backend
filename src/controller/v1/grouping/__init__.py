@@ -192,8 +192,10 @@ def create_grouping(request, class_id: int, body: CreateGroupingRequest):
 @openapi.tag("分组接口")
 @openapi.description(
     """申请加入一个分组，或者组长邀请特定成员加入分组，或者教师将特定成员加入分组。
-若是自行申请加入分组，则class_member_id将被强制替换为当前用户在班级中的id。
-若用户已经在一个组中，则无法加入新组；若用户先前申请了加入组，或者被邀请加入组，则再次申请时，将会覆盖之前的申请。"""
+若是自行申请加入分组，则class_member_id必须为当前用户在班级中的id；
+若是组长邀请特定成员加入分组，则class_member_id必须为被邀请成员在班级中的id。
+若用户已经在一个组中，则无法加入新组；若用户先前申请了加入组，或者被邀请加入组，则再次申请时，
+无法被邀请加入，但是本人的申请可以覆盖之前的邀请。"""
 )
 @need_login()
 def join_grouping(request, class_id: int, group_id: int, class_member_id: int):
@@ -229,14 +231,11 @@ def join_grouping(request, class_id: int, group_id: int, class_member_id: int):
                 "Group is not in pending status",
             )
 
+        # 获取目标班级成员
         class_member_stmt = select(ClassMember).where(
             ClassMember.class_id == class_id,
             ClassMember.id == class_member_id,
         )
-        if request.ctx.user.user_type == UserType.student:
-            class_member_stmt = class_member_stmt.where(
-                ClassMember.user_id == request.ctx.user.id
-            )
         class_member = session.execute(class_member_stmt).scalar()
         if not class_member:
             return ErrorResponse.new_error(
@@ -274,13 +273,28 @@ def join_grouping(request, class_id: int, group_id: int, class_member_id: int):
 
         if request.ctx.user.user_type == UserType.student:
             if class_member.user_id != request.ctx.user.id:  # 队长邀请队员
+                # 如果这个组员已经有被邀请的记录（不管是自己组还是别人组），都不允许再次邀请
+                if (
+                    class_member.group_id is not None
+                    and class_member.status is not None
+                ):
+                    return ErrorResponse.new_error(
+                        400,
+                        "Class Member already being invited",
+                    )
                 request_status = GroupMemberRoleStatus.member_review
-            else:  # 自行申请
+            else:  # 自行申请，可以覆盖之前的邀请
+                # 自行申请的情况下，class_member_id必须为当前用户在班级中的id
+                if class_member.user.id != request.ctx.user.id:
+                    return ErrorResponse.new_error(
+                        400,
+                        "Class Member id is invalid",
+                    )
                 request_status = GroupMemberRoleStatus.leader_review
         elif (
             request.ctx.user.user_type == UserType.teacher
             or request.ctx.user.user_type == UserType.admin
-        ):
+        ):  # 教师或管理员将特定成员加入分组
             request_status = GroupMemberRoleStatus.approved
 
         # 更新班级成员的分组信息
@@ -317,6 +331,7 @@ def join_grouping(request, class_id: int, group_id: int, class_member_id: int):
 def leave_grouping(request, class_id: int, group_id: int, class_member_id: int):
     db = request.app.ctx.db
 
+    # 判断用户是否有班级访问权限
     clazz = service.class_.has_class_access(request, class_id)
     if not clazz:
         return ErrorResponse.new_error(
@@ -324,6 +339,7 @@ def leave_grouping(request, class_id: int, group_id: int, class_member_id: int):
             "Class Not Found",
         )
 
+    # 判断班级是否处于分组状态
     if clazz.status != ClassStatus.grouping:
         return ErrorResponse.new_error(
             403,
@@ -334,17 +350,20 @@ def leave_grouping(request, class_id: int, group_id: int, class_member_id: int):
         group = session.execute(
             select(Group).where(Group.id == group_id, Group.class_id == class_id)
         ).scalar()
+        # 判断分组是否存在
         if not group:
             return ErrorResponse.new_error(
                 404,
                 "Group Not Found",
             )
+        # 判断分组是否处于待审核状态
         if group.status != GroupStatus.pending:
             return ErrorResponse.new_error(
                 403,
                 "Group is not in pending status",
             )
 
+        # 获取自己的班级成员信息
         self_class_member = session.execute(
             select(ClassMember).where(
                 ClassMember.class_id == class_id,
@@ -354,6 +373,7 @@ def leave_grouping(request, class_id: int, group_id: int, class_member_id: int):
             )
         ).scalar()
 
+        # 获取目标班级成员信息
         class_member = session.execute(
             select(ClassMember).where(
                 ClassMember.class_id == class_id,
@@ -369,21 +389,25 @@ def leave_grouping(request, class_id: int, group_id: int, class_member_id: int):
 
         # 判断用户是否有权限退出特定成员
         if request.ctx.user.user_type == UserType.student:
+            # 如果是学生，需要判断是否有权限退出
             if not self_class_member:
                 return ErrorResponse.new_error(
                     403,
                     "You are not in this group",
                 )
+            # 判断是否是组长
             is_leader = False
             for role in self_class_member.roles:
                 if role.is_manager:
                     is_leader = True
                     break
+            # 如果不是组长，只能退出自己
             if self_class_member.id != class_member_id and not is_leader:
                 return ErrorResponse.new_error(
                     403,
                     "You can only leave yourself",
                 )
+            # 如果是组长，不能退出自己
             elif is_leader and self_class_member.id == class_member_id:
                 return ErrorResponse.new_error(
                     403,
@@ -401,8 +425,14 @@ def leave_grouping(request, class_id: int, group_id: int, class_member_id: int):
             )
             .values(group_id=None, status=None)
         )
-
         session.execute(stmt)
+
+        # 删除组员角色
+        stmt = GroupMemberRole.__table__.delete().where(
+            GroupMemberRole.class_member_id == class_member_id,
+        )
+        session.execute(stmt)
+
         session.commit()
 
     return BaseDataResponse(

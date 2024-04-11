@@ -22,7 +22,7 @@ from model.response_model import (
     BaseListResponse,
     ErrorResponse,
 )
-from model.schema import UserSchema
+from model.schema import UserSchema, ClassMemberSchema
 
 class_bp = Blueprint("class", url_prefix="/class")
 
@@ -256,8 +256,9 @@ def get_class_member(request, class_id: int):
         result = (
             session.query(ClassMember).filter(ClassMember.class_id == class_id).all()
         )
-
-    return BaseDataResponse.new_data([item.user_id for item in result])
+        return BaseDataResponse.new_data(
+            [ClassMemberSchema.model_validate(item) for item in result]
+        )
 
 
 @class_bp.route("/<class_id:int>/member", methods=["POST"])
