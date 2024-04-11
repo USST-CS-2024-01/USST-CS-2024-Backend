@@ -123,7 +123,8 @@ def create_group(request, class_id: int, body: CreateGroupRequest):
     with db() as session:
         # 检查是否已经有分组
         stmt = select(ClassMember).where(
-            ClassMember.class_id == class_id, ClassMember.user_id == body.leader
+            ClassMember.class_id == class_id,
+            ClassMember.user_id == body.leader,
         )
 
         result = session.execute(stmt).scalar()
@@ -133,7 +134,10 @@ def create_group(request, class_id: int, body: CreateGroupRequest):
                 "Leader not found in class",
             )
 
-        if result.group_id is not None:
+        if (
+            result.group_id is not None
+            and result.status == GroupMemberRoleStatus.approved
+        ):
             return ErrorResponse.new_error(
                 400,
                 "Leader already in a group",
@@ -156,7 +160,7 @@ def create_group(request, class_id: int, body: CreateGroupRequest):
                     ClassMember.user_id == body.leader,
                 )
             )
-            .values(group_id=group.id)
+            .values(group_id=group.id, status=GroupMemberRoleStatus.approved)
         )
 
         session.execute(stmt)
@@ -174,11 +178,7 @@ def create_group(request, class_id: int, body: CreateGroupRequest):
                 "Leader role not found in class config",
             )
 
-        gmr = GroupMemberRole(
-            class_member_id=result.id,
-            role_id=leader.id,
-            status=GroupMemberRoleStatus.approved,
-        )
+        gmr = GroupMemberRole(class_member_id=result.id, role_id=leader.id)
         session.add(gmr)
 
         session.commit()
@@ -458,7 +458,7 @@ def leave_group(request, class_id: int, group_id: int, class_member_id: int):
 在由教师或管理员调用时，则无需上述校验，可以直接将特定成员加入分组。"""
 )
 @need_login()
-def approve_group(request, class_id: int, group_id: int, class_member_id: int):
+def approve_group_member(request, class_id: int, group_id: int, class_member_id: int):
     db = request.app.ctx.db
 
     # 判断用户是否有班级访问权限
@@ -617,8 +617,8 @@ def get_group_member(request, class_id: int, group_id: int, class_member_id: int
 修改分组成员信息，可修改以下内容：
 - 组员的 Git 仓库账号，传入一个列表，每一个元素都是 String 类型；
 - 组员的角色ID，传入列表，每一个元素都是整数类型，表示角色ID，必须是该班级的角色，同时，已有的组长角色不可修改；每个角色在一个组内只能有一个人；
-    
-仅组长可以修改组员信息。
+
+仅组长可以修改组员信息，组员必须是已经加入组的组员。
 """
 )
 @need_login()
@@ -657,6 +657,7 @@ def update_group_member(
                 ClassMember.group_id == group_id,
                 ClassMember.class_id == class_id,
                 ClassMember.id == class_member_id,
+                ClassMember.status == GroupMemberRoleStatus.approved,
             )
         ).scalar()
         if not class_member:
@@ -733,6 +734,160 @@ def update_group_member(
                 )
                 session.add(stmt)
 
+        session.commit()
+
+    return BaseDataResponse(
+        data=None,
+    ).json_response()
+
+
+@group_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>",
+    methods=["DELETE"],
+)
+@openapi.summary("解散分组")
+@openapi.tag("分组接口")
+@openapi.description(
+    """
+解散一个分组，只有组长可以解散分组，解散分组后，所有的组内角色信息将会清空，但不会清空Git仓库账号信息。
+- 只有在班级状态为`ClassStatus.grouping`时，才可以解散分组；
+- 只有在分组状态为`GroupStatus.pending`时，才可以解散分组。
+"""
+)
+@need_login()
+def delete_group(request, class_id: int, group_id: int):
+    db = request.app.ctx.db
+
+    # 判断用户是否有班级访问权限
+    group, self_class_member, is_manager = service.group.have_group_access(
+        request, class_id, group_id
+    )
+
+    if not group:
+        return ErrorResponse.new_error(404, "Group not found.")
+    if not is_manager:
+        return ErrorResponse.new_error(403, "You are not the leader of this group.")
+    if group.status != GroupStatus.pending:
+        return ErrorResponse.new_error(403, "Group is not in pending status.")
+
+    with db() as session:
+        session.add(group)
+        if group.clazz.status != ClassStatus.grouping:
+            return ErrorResponse.new_error(403, "Class is not in grouping status.")
+
+        # 获取组员信息
+        class_members = (
+            session.execute(
+                select(ClassMember).where(
+                    ClassMember.group_id == group_id,
+                    ClassMember.class_id == class_id,
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        # 删除组员角色
+        stmt = GroupMemberRole.__table__.delete().where(
+            GroupMemberRole.class_member_id.in_([member.id for member in class_members])
+        )
+        session.execute(stmt)
+
+        # 删除组员信息
+        stmt = (
+            ClassMember.__table__.update()
+            .where(ClassMember.group_id == group_id)
+            .values(group_id=None, status=None)
+        )
+        session.execute(stmt)
+
+        # 删除组信息
+        stmt = Group.__table__.delete().where(Group.id == group_id)
+        session.execute(stmt)
+
+        session.commit()
+
+    return BaseDataResponse(
+        data=None,
+    ).json_response()
+
+
+@group_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>/approve",
+    methods=["POST"],
+)
+@openapi.summary("审核分组")
+@openapi.tag("分组接口")
+@openapi.description(
+    """
+审核分组，只有教师可以审核分组，审核分组后，分组状态将会变为`GroupStatus.normal`。
+- 只有在班级状态为`ClassStatus.grouping`时，才可以审核分组；
+- 只有在分组状态为`GroupStatus.pending`时，才可以审核分组。
+- 分组审核后，该组将无法新增或删除成员，但可以修改成员的信息。
+"""
+)
+@need_login()
+@need_role([UserType.admin, UserType.teacher])
+def approve_group(request, class_id: int, group_id: int):
+    db = request.app.ctx.db
+
+    # 判断用户是否有班级访问权限
+    group, self_class_member, is_manager = service.group.have_group_access(
+        request, class_id, group_id
+    )
+
+    if not group:
+        return ErrorResponse.new_error(404, "Group not found.")
+    if group.status != GroupStatus.pending:
+        return ErrorResponse.new_error(403, "Group is not in pending status.")
+
+    with db() as session:
+        session.add(group)
+        if group.clazz.status != ClassStatus.grouping:
+            return ErrorResponse.new_error(403, "Class is not in grouping status.")
+
+        group.status = GroupStatus.normal
+        session.commit()
+
+    return BaseDataResponse(
+        data=None,
+    ).json_response()
+
+
+@group_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>/approve",
+    methods=["DELETE"],
+)
+@openapi.summary("撤销分组审核")
+@openapi.tag("分组接口")
+@openapi.description(
+    """
+撤销分组审核，只有教师可以撤销分组审核，撤销分组审核后，分组状态将会变为`GroupStatus.pending`。
+- 只有在班级状态为`ClassStatus.grouping`时，才可以撤销分组审核；
+- 只有在分组状态为`GroupStatus.normal`时，才可以撤销分组审核。
+"""
+)
+@need_login()
+@need_role([UserType.admin, UserType.teacher])
+def revoke_group_approval(request, class_id: int, group_id: int):
+    db = request.app.ctx.db
+
+    # 判断用户是否有班级访问权限
+    group, self_class_member, is_manager = service.group.have_group_access(
+        request, class_id, group_id
+    )
+
+    if not group:
+        return ErrorResponse.new_error(404, "Group not found.")
+    if group.status != GroupStatus.normal:
+        return ErrorResponse.new_error(403, "Group is not in normal status.")
+
+    with db() as session:
+        session.add(group)
+        if group.clazz.status != ClassStatus.grouping:
+            return ErrorResponse.new_error(403, "Class is not in grouping status.")
+
+        group.status = GroupStatus.pending
         session.commit()
 
     return BaseDataResponse(
