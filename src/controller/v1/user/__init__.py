@@ -1,6 +1,8 @@
 from sanic import Blueprint
 from sanic_ext import openapi
 from sqlalchemy import func, select, or_
+
+import service.onlyoffice
 from controller.v1.user.request_model import (
     ListUserRequest,
     MeUserUpdateRequest,
@@ -11,7 +13,12 @@ from middleware.auth import need_login, need_role
 from middleware.validator import validate
 from model import User
 from model.enum import UserType
-from model.response_model import BaseListResponse, BaseResponse, ErrorResponse
+from model.response_model import (
+    BaseListResponse,
+    BaseResponse,
+    ErrorResponse,
+    BaseDataResponse,
+)
 from model.schema import UserSchema
 from util.parameter import generate_parameters_from_pydantic
 from util import encrypt
@@ -336,4 +343,17 @@ async def create_user(request, body: UserUpdateRequest):
         code=200,
         message="ok",
         data=new_user_pydantic,
+    ).json_response()
+
+
+@user_bp.route("/<user_id:int>/avatar", methods=["GET"])
+@openapi.summary("获取用户头像")
+@openapi.tag("用户接口")
+@openapi.parameter(name="user_id", description="用户ID", in_="path", required=True)
+@openapi.secured("session")
+@need_login()
+async def get_user_avatar(request, user_id):
+    avatar = await service.onlyoffice.get_avatar_url(request, user_id)
+    return BaseDataResponse(
+        code=200, message="ok", data={"avatar": avatar}
     ).json_response()

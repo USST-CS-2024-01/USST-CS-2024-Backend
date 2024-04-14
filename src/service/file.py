@@ -1,10 +1,15 @@
+import asyncio
 import time
 from datetime import datetime
+from typing import Dict, Any
 from uuid import uuid4
 
-from model import FileOwnerType, File, FileType
+from sqlalchemy import select
 
-SUPPORT_DOCUMENT = ["doc", "docx", "xls", "xlsx", "ppt", "pptx"]
+import service.group
+from model import FileOwnerType, File, FileType, UserType, Delivery
+
+SUPPORT_DOCUMENT = ["doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf"]
 
 
 def generate_storage_path(
@@ -122,3 +127,142 @@ async def cancel_upload_session(request, file_session_id: str):
         raise ValueError("File not found") from e
 
     await cache.delete(file_session_id)
+
+
+async def check_has_access(request, file_id: int) -> (File, Dict[str, Any]):
+    """
+    Check whether the user has access to the file
+    :param request: Request
+    :param file_id: File ID
+    :return: File
+    """
+    user = request.ctx.user
+    db = request.app.ctx.db
+    cache = request.app.ctx.cache
+
+    tmp_access_key = f"file_access:{user.id}:{file_id}"
+
+    access = {
+        "read": True,
+        "write": True,
+        "delete": True,
+        "annotate": True,
+        "rename": True,
+    }
+
+    with db() as session:
+        file = session.execute(select(File).where(File.id == file_id)).scalar()
+        if not file:
+            raise ValueError("File not found")
+
+        # 若用户为管理员，则直接返回
+        if user.user_type == UserType.admin:
+            return file, access
+
+        # 若文件为用户文件，且用户为文件所有者，则直接返回
+        if file.owner_type == FileOwnerType.user and file.owner_user_id == user.id:
+            return file, access
+
+        # 若文件为小组文件，且用户为小组成员，则直接返回
+        if file.owner_type == FileOwnerType.group:
+            group_access, _, _ = service.group.have_group_access_by_id(
+                request, file.owner_group_id
+            )
+            if group_access:
+                return file, access
+
+        # 若文件为交付文件，需要进一步地判断
+        if file.owner_type == FileOwnerType.delivery:
+            delivery = session.execute(
+                select(Delivery).where(Delivery.id == file.owner_delivery_id)
+            ).scalar()
+            if not delivery:
+                raise ValueError("File not found")
+
+            # 判断交付物所属小组是否为用户所在小组
+            group_id = delivery.group_id
+            group_access, _, _ = service.group.have_group_access_by_id(
+                request, group_id
+            )
+
+            if group_access:
+                access["write"] = False
+                access["delete"] = False
+                access["rename"] = False
+
+                return file, access
+
+        # 否则，检查用户是否有临时文件访问权限
+        access = await cache.get_pickle(tmp_access_key)
+        if not access:
+            raise ValueError("File not found")
+
+        return file, access
+
+
+async def temp_file_access(request, file_id: int, access: Dict[str, Any], expire=3600):
+    """
+    Temp file access
+    :param request: Request
+    :param file_id: File ID
+    :param access: Access
+    :param expire: Expire time
+    :return: None
+    """
+    user = request.ctx.user
+    cache = request.app.ctx.cache
+
+    tmp_access_key = f"file_access:{user.id}:{file_id}"
+    await cache.set_pickle(tmp_access_key, access, expire=expire)
+
+
+async def onlyoffice_callback(request, file_id: int, payload: Dict[str, Any]):
+    """
+    OnlyOffice callback
+    :param request: Request
+    :param file_id: File ID
+    :param payload: Payload
+    :return: None
+    """
+    db = request.app.ctx.db
+    goflet = request.app.ctx.goflet
+    cache = request.app.ctx.cache
+
+    with db() as session:
+        file = session.execute(select(File).where(File.id == file_id)).scalar()
+        if not file:
+            raise ValueError("File not found")
+
+        if payload["status"] == 2:
+            cache_key = f"onlyoffice:file:{file_id}"
+            await cache.delete(cache_key)
+
+            goflet.onlyoffice_callback(payload, file.file_key)
+            asyncio.create_task(async_update_file_meta(request, file))
+
+
+async def async_update_file_meta(request, file):
+    """
+    Update file meta
+    :param request: Request
+    :param file: File
+    :return: None
+    """
+    goflet = request.app.ctx.goflet
+    db = request.app.ctx.db
+    retries = 3
+    with db() as session:
+        session.add(file)
+        while retries > 0:
+            try:
+                file_meta = goflet.get_file_meta(file.file_key)
+                file.file_size = file_meta["fileSize"]
+                file.modify_date = datetime.fromtimestamp(file_meta["lastModified"])
+                session.commit()
+                break
+            except Exception as e:
+                retries -= 1
+                if retries == 0:
+                    raise e
+                print(f"Retry update file meta: {file.id}, retries: {retries}")
+                await asyncio.sleep(1)

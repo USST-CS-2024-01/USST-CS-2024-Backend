@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>${filename}</title>
+</head>
+<body>
+<div id="placeholder"></div>
+<script type="text/javascript" src="${endpoint}/web-apps/apps/api/documents/api.js"></script>
+<script>
+    const config = ${config};
+    config.height = window.innerHeight - 20;
+    config.width = window.innerWidth - 20;
+
+    const onRequestUsers = function (event) {
+        const c = event.data.c;
+        const id = event.data.id;
+
+
+        console.log("Request users for document " + id, c);
+        const searchParams = new URLSearchParams(window.location.search);
+        const request_url = `/api/v1/user/${id}/avatar`
+
+        fetch(request_url, {
+            headers: {
+                'Authorization': 'Bearer ' + searchParams.get('token'),
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                data = data.data;
+                docEditor.setUsers({
+                    "c": event.data.c,
+                    "users": [{
+                        "id": `${id}`,
+                        "image": data.avatar
+                    }]
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    };
+
+    config.events = {
+        "onRequestUsers": onRequestUsers
+    };
+
+    const docEditor = new DocsAPI.DocEditor("placeholder", config);
+
+</script>
+</body>
+</html>

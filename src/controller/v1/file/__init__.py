@@ -1,8 +1,13 @@
-from sanic import Blueprint
+import json
+import traceback
+
+from sanic import Blueprint, html, redirect
+from sanic import json as sanic_json
 from sanic_ext.extensions.openapi import openapi
 
 import service.file
 import service.group
+import service.onlyoffice
 from controller.v1.file.request_model import CreateFileRequest
 from controller.v1.file.response_model import UploadSessionResponse
 from middleware.auth import need_login
@@ -12,6 +17,7 @@ from model.response_model import ErrorResponse, BaseDataResponse
 from model.schema import FileSchema
 
 file_bp = Blueprint("file")
+ONLYOFFICE_TEMPLATE = open("template/onlyoffice.html", "r").read()
 
 
 @file_bp.route("/file/upload", methods=["POST"])
@@ -88,3 +94,117 @@ async def cancel_file_upload_session(request, session_id: str):
     except Exception as e:
         return ErrorResponse.new_error(400, str(e))
     return BaseDataResponse().json_response()
+
+
+@file_bp.route("/file/<file_id:int>", methods=["GET"])
+@openapi.summary("获取文件信息")
+@openapi.tag("文件接口")
+@need_login()
+async def get_file_info(request, file_id: int):
+    try:
+        file, has_access = await service.file.check_has_access(request, file_id)
+    except Exception as e:
+        return ErrorResponse.new_error(404, str(e))
+
+    if not has_access["read"]:
+        return ErrorResponse.new_error(403, "No access to the file")
+
+    return BaseDataResponse(data=FileSchema.model_validate(file)).json_response()
+
+
+@file_bp.route("/file/<file_id:int>/download", methods=["GET"])
+@openapi.summary("下载文件")
+@openapi.tag("文件接口")
+@need_login()
+async def download_file(request, file_id: int):
+    goflet = request.app.ctx.goflet
+
+    try:
+        file, access = await service.file.check_has_access(request, file_id)
+    except Exception as e:
+        return ErrorResponse.new_error(404, str(e))
+
+    if not access["read"]:
+        return ErrorResponse.new_error(403, "No access to the file")
+
+    return BaseDataResponse(
+        data=goflet.create_download_url(file.file_key)
+    ).json_response()
+
+
+@file_bp.route("/file/<file_id:int>/onlyoffice/download", methods=["GET"])
+@openapi.summary("OnlyOffice客户端获取文件")
+@openapi.tag("文件接口")
+@openapi.description(
+    """
+    该接口仅用于OnlyOffice客户端获取文件，用户不应直接访问该接口
+"""
+)
+async def onlyoffice_download_file(request, file_id: int):
+    goflet = request.app.ctx.goflet
+    db = request.app.ctx.db
+
+    try:
+        await service.onlyoffice.check_onlyoffice_access(request, file_id)
+    except Exception as e:
+        return ErrorResponse.new_error(401, "Unauthorized")
+
+    with db() as session:
+        file = (
+            session.query(service.file.File)
+            .filter(service.file.File.id == file_id)
+            .one_or_none()
+        )
+        if not file:
+            return ErrorResponse.new_error(404, "File not found")
+
+    return redirect(goflet.create_download_url(file.file_key))
+
+
+@file_bp.route("/file/<file_id:int>/onlyoffice/view", methods=["GET"])
+@openapi.summary("渲染OnlyOffice文件")
+@openapi.tag("文件接口")
+@need_login(where="query")
+async def onlyoffice_view_file(request, file_id: int):
+    try:
+        file, access = await service.file.check_has_access(request, file_id)
+    except Exception as e:
+        return ErrorResponse.new_error(404, str(e))
+
+    try:
+        onlyoffice_config = await service.onlyoffice.generate_onlyoffice_config(
+            request, file, access
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return ErrorResponse.new_error(400, str(e))
+
+    json_config = json.dumps(onlyoffice_config)
+    onlyoffice_endpoint = request.app.config["ONLYOFFICE_ENDPOINT"]
+    file_name = file.name
+
+    html_data = (
+        ONLYOFFICE_TEMPLATE.replace("${endpoint}", onlyoffice_endpoint)
+        .replace("${config}", json_config)
+        .replace("${filename}", file_name)
+    )
+
+    return html(html_data)
+
+
+@file_bp.route("/file/<file_id:int>/onlyoffice/callback", methods=["POST"])
+@openapi.summary("OnlyOffice回调")
+@openapi.tag("文件接口")
+async def onlyoffice_callback(request, file_id: int):
+    try:
+        await service.onlyoffice.check_onlyoffice_access(request, file_id)
+    except Exception as e:
+        traceback.print_exc()
+        return ErrorResponse.new_error(401, str(e))
+    try:
+        await service.file.onlyoffice_callback(request, file_id, request.json)
+    except Exception as e:
+        traceback.print_exc()
+        return ErrorResponse.new_error(400, str(e))
+
+    return sanic_json({"error": 0})

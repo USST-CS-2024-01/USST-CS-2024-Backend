@@ -14,7 +14,7 @@ from model.response_model import ErrorResponse
 T = TypeVar("T")
 
 
-def need_login() -> Callable[[T], T]:
+def need_login(where="header") -> Callable[[T], T]:
     """
     Decorator to require login
     :return: Decorator
@@ -26,18 +26,30 @@ def need_login() -> Callable[[T], T]:
             request = extract_request(*args)
             cache = request.app.ctx.cache
 
-            session_id = request.headers.get("Authorization")
-            if not session_id:
+            if where == "header":
+                session_id = request.headers.get("Authorization")
+                if not session_id:
+                    return ErrorResponse.new_error(
+                        code=401, message="Unauthorized", detail="Missing session ID"
+                    )
+
+                if not session_id.startswith("Bearer "):
+                    return ErrorResponse.new_error(
+                        code=401, message="Unauthorized", detail="Invalid session ID"
+                    )
+
+                session_id = session_id[7:]
+            elif where == "query":
+                session_id = request.args.get("token")
+                if not session_id:
+                    return ErrorResponse.new_error(
+                        code=401, message="Unauthorized", detail="Missing session ID"
+                    )
+            else:
                 return ErrorResponse.new_error(
-                    code=401, message="Unauthorized", detail="Missing session ID"
+                    code=500, message="Internal Server Error", detail="Invalid where"
                 )
 
-            if not session_id.startswith("Bearer "):
-                return ErrorResponse.new_error(
-                    code=401, message="Unauthorized", detail="Invalid session ID"
-                )
-
-            session_id = session_id[7:]
             user = await cache.get_pickle(session_id)
             if not user:
                 return ErrorResponse.new_error(

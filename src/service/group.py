@@ -56,3 +56,28 @@ def have_group_access(
                 break
 
         return group, member, is_manager
+
+
+def have_group_access_by_id(
+    request, group_id: int
+) -> (Group or bool, ClassMember or bool, bool):
+    """
+    Check whether the user has access to the group, and return the group and the class member
+
+    :param request: Request
+    :param group_id: Group ID
+
+    :return: Group; ClassMember; Whether the user is group leader
+    """
+    db = request.app.ctx.db
+
+    stmt = select(Group).where(
+        Group.id == group_id,
+    )
+
+    with db() as session:
+        group = session.execute(stmt).scalar()
+        if not group:
+            return False, False, False
+
+        return have_group_access(request, group.class_id, group_id)

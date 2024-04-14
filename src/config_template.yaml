@@ -1,5 +1,9 @@
 # This is a template for the configuration file
 # You can copy this file to src/config.yaml and modify the values as needed
+api:
+  # Base URL for the server
+  baseUrl: "http://localhost:9999"
+
 goflet:
   # Base URL for the API
   baseUrl: "https://cdn.bzpl.tech"
@@ -35,3 +39,9 @@ redis:
   password: ""
   # Redis Database
   database: 0
+
+onlyoffice:
+  # OnlyOffice Endpoint
+  endpoint: "http://localhost:18000"
+  # OnlyOffice API Key
+  secret: "secret"
