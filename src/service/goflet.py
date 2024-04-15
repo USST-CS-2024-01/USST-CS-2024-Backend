@@ -3,8 +3,8 @@ import uuid
 from typing import Optional, List, Dict, Any
 from urllib.parse import quote
 
+import aiohttp
 import jwt
-import requests
 from pydantic import BaseModel
 
 
@@ -106,25 +106,25 @@ class Goflet:
         """
         return self.generate_url(f"/upload/{file_path}", "PUT", {})
 
-    def cancel_upload_session(self, file_path: str):
+    async def cancel_upload_session(self, file_path: str):
         """
         Cancel upload session
         :param file_path: File path
         """
         url = self.generate_url(f"/upload/{file_path}", "DELETE", {})
-        result = requests.delete(url)
-        if result.status_code >= 400:
-            raise RuntimeError(result.json())
+        req = aiohttp.request("DELETE", url)
+        async with req as result:
+            result.raise_for_status()
 
-    def complete_upload_session(self, file_path: str):
+    async def complete_upload_session(self, file_path: str):
         """
         Complete upload session
         :param file_path: File path
         """
         url = self.generate_url(f"/upload/{file_path}", "POST", {})
-        result = requests.post(url)
-        if result.status_code >= 400:
-            raise RuntimeError(result.json())
+        req = aiohttp.request("POST", url)
+        async with req as result:
+            result.raise_for_status()
 
     def create_download_url(self, file_path: str) -> str:
         """
@@ -134,30 +134,30 @@ class Goflet:
         """
         return self.generate_url(f"/file/{file_path}", "GET", {})
 
-    def get_file_meta(self, file_path: str) -> Dict[str, Any]:
+    async def get_file_meta(self, file_path: str) -> Dict[str, Any]:
         """
         Get file metadata
         :param file_path: File path
         :return: File metadata
         """
         meta_url = self.generate_url(f"/api/meta/{file_path}", "GET", {})
-        result = requests.get(meta_url)
-        if result.status_code >= 400:
-            raise RuntimeError(result.json())
-        return result.json()
+        req = aiohttp.request("GET", meta_url)
+        async with req as result:
+            result.raise_for_status()
+            return await result.json()
 
-    def delete_file(self, file_path: str):
+    async def delete_file(self, file_path: str):
         """
         Delete file
         :param file_path: File path
         :return: File metadata
         """
         meta_url = self.generate_url(f"/file/{file_path}", "DELETE", {})
-        result = requests.delete(meta_url)
-        if result.status_code >= 400:
-            raise RuntimeError(result.json())
+        req = aiohttp.request("DELETE", meta_url)
+        async with req as result:
+            result.raise_for_status()
 
-    def create_empty_file(self, file_path: str) -> str:
+    async def create_empty_file(self, file_path: str) -> str:
         """
         Create empty file
         :param file_path: File path
@@ -167,12 +167,12 @@ class Goflet:
         payload = {
             "path": file_path,
         }
-        result = requests.post(meta_url, json=payload)
-        if result.status_code >= 400:
-            raise RuntimeError(result.json())
+        req = aiohttp.request("POST", meta_url, json=payload)
+        async with req as result:
+            result.raise_for_status()
         return self.create_download_url(file_path)
 
-    def copy_file(
+    async def copy_file(
         self, file_path: str, new_file_path: str, on_conflict="overwrite"
     ) -> str:
         """
@@ -188,12 +188,12 @@ class Goflet:
             "targetPath": new_file_path,
             "onConflict": on_conflict,
         }
-        result = requests.post(meta_url, json=payload)
-        if result.status_code >= 400:
-            raise RuntimeError(result.json())
+        req = aiohttp.request("POST", meta_url, json=payload)
+        async with req as result:
+            result.raise_for_status()
         return self.create_download_url(new_file_path)
 
-    def move_file(
+    async def move_file(
         self, file_path: str, new_file_path: str, on_conflict="overwrite"
     ) -> str:
         """
@@ -209,12 +209,12 @@ class Goflet:
             "targetPath": new_file_path,
             "onConflict": on_conflict,
         }
-        result = requests.post(meta_url, json=payload)
-        if result.status_code >= 400:
-            raise RuntimeError(result.json())
+        req = aiohttp.request("POST", meta_url, json=payload)
+        async with req as result:
+            result.raise_for_status()
         return self.create_download_url(new_file_path)
 
-    def onlyoffice_callback(self, data: Dict[str, Any], file_path: str):
+    async def onlyoffice_callback(self, data: Dict[str, Any], file_path: str):
         """
         OnlyOffice callback
         :param data: Callback data
@@ -222,6 +222,6 @@ class Goflet:
         :return: None
         """
         meta_url = self.generate_url(f"/api/onlyoffice/{file_path}", "POST", {})
-        result = requests.post(meta_url, json=data)
-        if result.status_code >= 400:
-            raise RuntimeError(result.json())
+        req = aiohttp.request("POST", meta_url, json=data)
+        async with req as result:
+            result.raise_for_status()

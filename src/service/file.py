@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy import select
 
+import service.class_
 import service.group
 from model import FileOwnerType, File, FileType, UserType, Delivery
 
@@ -32,6 +33,23 @@ def generate_file_session_id() -> str:
     :return: File session ID
     """
     return f"file:{int(time.time())}_{uuid4()}"
+
+
+def get_file_owner_id(file: File) -> int:
+    """
+    Get file owner ID
+    :param file: File
+    :return: File owner ID
+    """
+    if file.owner_type == FileOwnerType.delivery:
+        return file.owner_delivery_id
+    if file.owner_type == FileOwnerType.group:
+        return file.owner_group_id
+    if file.owner_type == FileOwnerType.user:
+        return file.owner_user_id
+    if file.owner_type == FileOwnerType.clazz:
+        return file.owner_clazz_id
+    return 0
 
 
 async def start_upload_session(
@@ -61,8 +79,11 @@ async def start_upload_session(
         file_size=0,
         owner_type=owner_type,
         owner_delivery_id=owner_id if owner_type == FileOwnerType.delivery else None,
-        owner_user_id=owner_id if owner_type == FileOwnerType.user else None,
+        owner_user_id=(
+            owner_id if owner_type == FileOwnerType.user else request.ctx.user.id
+        ),
         owner_group_id=owner_id if owner_type == FileOwnerType.group else None,
+        owner_clazz_id=owner_id if owner_type == FileOwnerType.clazz else None,
         create_date=datetime.now(),
         modify_date=datetime.now(),
     )
@@ -90,9 +111,9 @@ async def complete_upload_session(request, file_session_id: str) -> File:
 
     file_key = file.file_key
     try:
-        goflet.complete_upload_session(file_key)
+        await goflet.complete_upload_session(file_key)
 
-        file_meta = goflet.get_file_meta(file_key)
+        file_meta = await goflet.get_file_meta(file_key)
         file.file_size = file_meta["fileSize"]
         file.modify_date = datetime.fromtimestamp(file_meta["lastModified"])
     except Exception as e:
@@ -122,7 +143,7 @@ async def cancel_upload_session(request, file_session_id: str):
 
     file_key = file.file_key
     try:
-        goflet.cancel_upload_session(file_key)
+        await goflet.cancel_upload_session(file_key)
     except Exception as e:
         raise ValueError("File not found") from e
 
@@ -169,6 +190,18 @@ async def check_has_access(request, file_id: int) -> (File, Dict[str, Any]):
                 request, file.owner_group_id
             )
             if group_access:
+                return file, access
+
+        # 若文件为班级文件，则需要判断用户角色是否为教师，若是，则可以对文件修改，否则只能查看
+        if file.owner_type == FileOwnerType.clazz:
+            clazz = service.class_.has_class_access(request, file.owner_clazz_id)
+            if clazz:
+                # 学生只能预览，不能进行任何操作
+                if user.user_type == UserType.student:
+                    access["write"] = False
+                    access["delete"] = False
+                    access["rename"] = False
+                    access["annotate"] = False
                 return file, access
 
         # 若文件为交付文件，需要进一步地判断
@@ -237,7 +270,7 @@ async def onlyoffice_callback(request, file_id: int, payload: Dict[str, Any]):
             cache_key = f"onlyoffice:file:{file_id}"
             await cache.delete(cache_key)
 
-            goflet.onlyoffice_callback(payload, file.file_key)
+            await goflet.onlyoffice_callback(payload, file.file_key)
             asyncio.create_task(async_update_file_meta(request, file))
 
 
@@ -255,7 +288,7 @@ async def async_update_file_meta(request, file):
         session.add(file)
         while retries > 0:
             try:
-                file_meta = goflet.get_file_meta(file.file_key)
+                file_meta = await goflet.get_file_meta(file.file_key)
                 file.file_size = file_meta["fileSize"]
                 file.modify_date = datetime.fromtimestamp(file_meta["lastModified"])
                 session.commit()
@@ -266,3 +299,27 @@ async def async_update_file_meta(request, file):
                     raise e
                 print(f"Retry update file meta: {file.id}, retries: {retries}")
                 await asyncio.sleep(1)
+
+
+async def delete_file(request, file_id: int):
+    """
+    Delete file
+    :param request: Request
+    :param file_id: File ID
+    :return: None
+    """
+    db = request.app.ctx.db
+    goflet = request.app.ctx.goflet
+    cache = request.app.ctx.cache
+
+    with db() as session:
+        file = session.execute(select(File).where(File.id == file_id)).scalar()
+        if not file:
+            raise ValueError("File not found")
+
+        await goflet.delete_file(file.file_key)
+        session.delete(file)
+        session.commit()
+
+        cache_key = f"onlyoffice:file:{file_id}"
+        await cache.delete(cache_key)

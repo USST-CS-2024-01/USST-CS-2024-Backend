@@ -76,9 +76,10 @@ class FileSchema(BaseJsonAbleModel):
     owner_delivery_id: Optional[int] = None
     owner_group_id: Optional[int] = None
     owner_user_id: Optional[int] = None
+    owner_clazz_id: Optional[int] = None
     create_date: datetime
     modify_date: datetime
-    tags: Optional[dict] = None
+    tags: Optional[List[str]] = None
 
 
 @openapi.component()

@@ -58,6 +58,7 @@ class FileOwnerType(JsonableEnum):
     delivery = "delivery"
     group = "group"
     user = "user"
+    clazz = "clazz"
 
 
 @openapi.component()

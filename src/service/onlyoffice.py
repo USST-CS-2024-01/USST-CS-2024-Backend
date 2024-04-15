@@ -1,10 +1,16 @@
 import base64
+import copy
 import os
 import time
+from datetime import datetime
 
 import jwt
+import aiohttp
 import urllib3
+from sqlalchemy import insert
 
+import service.file
+from model import File
 from service.user import get_avatar_url
 
 ONLY_OFFICE_BASIC_CONFIG = {
@@ -50,6 +56,8 @@ DOCUMENT_MAP = {
     "pdf": "pdf",
 }
 
+DOCBUILDER_CONVERT_TO_NO_COMMENT = open("template/convert_to_no_comment.js", "r").read()
+
 
 def generate_tmp_file_key(file_id: int) -> str:
     """
@@ -88,11 +96,12 @@ async def check_onlyoffice_access(request, file_id: int):
     :return: None
     """
     authorization = request.headers.get("Authorization")
+    if authorization is None and request.json is not None and "token" in request.json:
+        authorization = f"Bearer {request.json['token']}"
+    if authorization is None and request.args.get("token") is not None:
+        authorization = f"Bearer {request.args['token'][0]}"
     if authorization is None:
-        authorization = request.json.get("token")
-        if authorization is None:
-            raise Exception("Unauthorized")
-        authorization = f"Bearer {authorization}"
+        raise Exception("Unauthorized")
     if not authorization.startswith("Bearer "):
         raise Exception("Unauthorized")
 
@@ -116,8 +125,13 @@ async def check_onlyoffice_access(request, file_id: int):
             # 解析url的path部分
             path = urllib3.util.parse_url(url).path
             # /file/<file_id:int>/onlyoffice/download
-            ends_with = f"/file/{file_id}/onlyoffice/download"
-            if not path.endswith(ends_with):
+            ends_with = [
+                f"/file/{file_id}/onlyoffice/download",
+                f"/file/{file_id}/onlyoffice/task/convert_to_no_comment",
+            ]
+            if not url.startswith(request.app.config["API_BASE_URL"]):
+                raise Exception("Unauthorized")
+            if not any(path.endswith(end) for end in ends_with):
                 raise Exception("Unauthorized")
         else:
             raise Exception("Unauthorized")
@@ -143,7 +157,7 @@ async def generate_onlyoffice_config(request, file, access):
 
     api_base = request.app.config["API_BASE_URL"]
 
-    onlyoffice_config = ONLY_OFFICE_BASIC_CONFIG.copy()
+    onlyoffice_config = copy.deepcopy(ONLY_OFFICE_BASIC_CONFIG)
     onlyoffice_config["documentType"] = DOCUMENT_MAP[ext]
     onlyoffice_config["document"]["fileType"] = ext
     onlyoffice_config["document"]["key"] = await get_file_tmp_key(request, file.id)
@@ -176,3 +190,105 @@ async def generate_onlyoffice_config(request, file, access):
     )
 
     return onlyoffice_config
+
+
+async def get_template_convert_to_no_comment(request, file: File):
+    """
+    渲染转换为无批注文档模板，返回渲染后的内容
+    :param file: 文件
+    :param request: Request
+    :return: None
+    """
+    f = DOCBUILDER_CONVERT_TO_NO_COMMENT
+    api_base = request.app.config["API_BASE_URL"]
+
+    download_url = f"{api_base}/api/v1/file/{file.id}/onlyoffice/download"
+    token = jwt.encode(
+        {
+            "payload": {"url": download_url},
+            "iat": int(time.time()),
+            "exp": int(time.time()) + 5 * 60,
+        },
+        request.app.config["ONLYOFFICE_SECRET"],
+    )
+
+    f = f.replace("${fileUrl}", f"{download_url}?token={token}").replace(
+        "${ext}", file.name.split(".")[-1]
+    )
+
+    return f
+
+
+async def convert_to_no_comment(request, file: File, new_file_name: str) -> File:
+    """
+    转换为无批注文档
+    :param request: Request
+    :param file: 文件
+    :param new_file_name: 新文件名
+    :return: None
+    """
+    goflet = request.app.ctx.goflet
+    db = request.app.ctx.db
+
+    payload = {
+        "async": False,
+        "url": f"{request.app.config['API_BASE_URL']}/api/v1/file/{file.id}/onlyoffice/task/convert_to_no_comment",
+    }
+    token = jwt.encode(
+        payload,
+        request.app.config["ONLYOFFICE_SECRET"],
+    )
+    data = {
+        "token": token,
+    }
+
+    aio_request = aiohttp.request(
+        "POST", f"{request.app.config['ONLYOFFICE_ENDPOINT']}/docbuilder", json=data
+    )
+    async with aio_request as response:
+        response.raise_for_status()
+        output_fname = f"output.{file.name.split('.')[-1]}"
+
+        output_url = await response.json()
+        output_url = output_url["urls"][output_fname]
+        file_path = service.file.generate_storage_path(
+            file.owner_type, service.file.get_file_owner_id(file), new_file_name
+        )
+
+    new_file = copy.deepcopy(file)
+    new_file.id = None
+    new_file.name = new_file_name
+    new_file.path = file_path
+    new_file.create_date = datetime.now()
+    await goflet.create_empty_file(file_path)
+    await goflet.onlyoffice_callback(
+        {
+            "status": 2,
+            "url": output_url,
+        },
+        file_path,
+    )
+    file_meta = await goflet.get_file_meta(file_path)
+    new_file.file_size = file_meta["fileSize"]
+    new_file.modify_date = datetime.fromtimestamp(file_meta["lastModified"])
+
+    with db() as session:
+        stmt = insert(File).values(
+            name=new_file.name,
+            file_key=new_file.path,
+            file_type=new_file.file_type,
+            file_size=new_file.file_size,
+            owner_type=new_file.owner_type,
+            owner_delivery_id=new_file.owner_delivery_id,
+            owner_user_id=new_file.owner_user_id,
+            owner_group_id=new_file.owner_group_id,
+            owner_clazz_id=new_file.owner_clazz_id,
+            create_date=new_file.create_date,
+            modify_date=new_file.modify_date,
+        )
+        result = session.execute(stmt)
+        new_file.id = result.inserted_primary_key[0]
+
+        session.commit()
+
+    return new_file

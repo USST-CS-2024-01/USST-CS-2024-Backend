@@ -289,7 +289,13 @@ class File(Base):
     )
     owner_user_id = Column(
         Integer,
-        ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"),
+        ForeignKey("user.id", ondelete="NO ACTION", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    owner_clazz_id = Column(
+        Integer,
+        ForeignKey("class.id", ondelete="CASCADE", onupdate="CASCADE"),
         nullable=True,
         index=True,
     )

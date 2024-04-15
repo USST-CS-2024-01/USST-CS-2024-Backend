@@ -534,7 +534,9 @@ async def leave_group(request, class_id: int, group_id: int, class_member_id: in
     },
 )
 @need_login()
-async def approve_group_member(request, class_id: int, group_id: int, class_member_id: int):
+async def approve_group_member(
+    request, class_id: int, group_id: int, class_member_id: int
+):
     db = request.app.ctx.db
 
     # 判断用户是否有班级访问权限
