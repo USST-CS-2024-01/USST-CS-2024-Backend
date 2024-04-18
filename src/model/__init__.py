@@ -237,6 +237,10 @@ class GroupMemberRole(Base):
     )
 
     __table_args__ = (UniqueConstraint("class_member_id", "role_id"),)
+    class_member = relationship(
+        "ClassMember", backref="group_member_roles", viewonly=True
+    )
+    role = relationship("GroupRole", backref="group_member_roles", viewonly=True)
 
 
 class Group(Base):

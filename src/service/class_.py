@@ -1,5 +1,6 @@
 from sqlalchemy import select, and_, or_
 
+import service.task
 from model import Class, UserType, GroupRole, Task, ClassStatus
 
 
@@ -121,17 +122,21 @@ def generate_new_class(db, class_name: str, class_description: str = None) -> Cl
         return new_class
 
 
-def change_class_task_sequence(db, class_id: int, task_id_list: list[int]) -> None:
+def change_class_task_sequence(request, class_id: int, task_id_list: list[int]) -> None:
     """
     Change the sequence of tasks in a class
-    :param db: Database session
+    :param request: Request
     :param class_id: Class ID
     :param task_id_list: Task ID list
     :return: Whether the operation is successful
     """
+    db = request.app.ctx.db
     # task_id_list中不能存在重复的task_id
     if len(task_id_list) != len(set(task_id_list)):
         raise ValueError("Task ID list contains duplicates.")
+
+    # 获取班级中被锁定的任务
+    locked_tasks = service.task.get_locked_tasks(request, class_id)
 
     with db() as session:
         stmt_class = select(Class).where(Class.id == class_id)
@@ -152,8 +157,6 @@ def change_class_task_sequence(db, class_id: int, task_id_list: list[int]) -> No
 
         all_tasks.sort(key=lambda x: task_id_list.index(x.id))
 
-        # TODO 检查当前任务是否可以被调整顺序
-
         # 更新任务的next_task_id
         for i, task_id in enumerate(task_id_list):
             if i < len(task_id_list) - 1:
@@ -163,6 +166,13 @@ def change_class_task_sequence(db, class_id: int, task_id_list: list[int]) -> No
 
         # 更新班级的first_task_id
         target_class.first_task_id = task_id_list[0]
+
+        # 检查修改后的任务链中，前面部分是否与已锁定的任务连完全相同
+        for i, task in enumerate(locked_tasks):
+            if task.id != task_id_list[i]:
+                raise ValueError(
+                    "Locked tasks are not consistent with the new task chain."
+                )
 
         session.commit()
 
