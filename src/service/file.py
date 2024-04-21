@@ -1,7 +1,7 @@
 import asyncio
 import time
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, List
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -323,3 +323,28 @@ async def delete_file(request, file_id: int):
 
         cache_key = f"onlyoffice:file:{file_id}"
         await cache.delete(cache_key)
+
+
+def check_file_in_group(request, group_id: int, file_ids: List[int]) -> List[File]:
+    """
+    Check whether the file is in the group
+    :param request: Request
+    :param group_id: Group ID
+    :param file_ids: File IDs
+    :return: File list
+    """
+    db = request.app.ctx.db
+
+    with db() as session:
+        files = (
+            session.query(File)
+            .filter(
+                File.owner_group_id == group_id,
+                File.id.in_(file_ids),
+                File.owner_type == FileOwnerType.group,
+            )
+            .all()
+        )
+        if len(files) != len(file_ids):
+            raise ValueError("Not all files are in the group")
+        return files

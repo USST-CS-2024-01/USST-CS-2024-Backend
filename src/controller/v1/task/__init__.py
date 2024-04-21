@@ -144,8 +144,6 @@ async def set_task_sequence(request, class_id: int, body: SetTaskSequenceRequest
     :param body: List of task IDs
     :return: Success response
     """
-    db = request.app.ctx.db
-
     if not has_class_access(request, class_id):
         return ErrorResponse.new_error(
             404,
@@ -488,7 +486,10 @@ async def get_group_task_chain(request, class_id: int, group_id: int):
             "Group Not Found",
         )
 
-    task_chain = service.task.get_group_locked_tasks(request, class_id, group_id)
+    try:
+        task_chain = service.task.get_group_locked_tasks(request, class_id, group_id)
+    except ValueError as e:
+        return ErrorResponse.new_error(400, str(e))
     current_task_id = group.current_task_id
 
     with db() as session:

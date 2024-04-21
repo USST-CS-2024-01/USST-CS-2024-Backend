@@ -31,6 +31,9 @@ def validate(
     if json and form:
         raise InitError("Cannot define both a form and json route validator")
 
+    if not any(schemas.values()):
+        raise InitError("No route validator defined")
+
     def decorator(f):
         @wraps(f)
         async def decorated_function(*args, **kwargs):

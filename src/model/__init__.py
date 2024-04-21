@@ -127,16 +127,17 @@ class GroupTask(Base):
     status = Column(
         Enum(GroupTaskStatus, name="task_status"), nullable=False, index=True
     )
-    related_files = relationship("File", secondary="group_task_attachment")
     publisher = Column(
         Integer,
         ForeignKey("group_role.id", ondelete="CASCADE", onupdate="CASCADE"),
         nullable=False,
     )  # 组内任务以角色区分发布者
+    related_files = relationship("File", secondary="group_task_attachment")
     assignees = relationship("GroupRole", secondary="group_task_assignee")
     publish_time = Column(DateTime, nullable=False, index=True)
-    deadline = Column(DateTime, nullable=False, index=True)
+    deadline = Column(DateTime, nullable=True, index=True)
     update_time = Column(DateTime, nullable=False, index=True)
+    priority = Column(Integer, nullable=False, index=True, default=0)  # 优先级
 
 
 class GroupTaskAttachment(Base):
@@ -391,6 +392,10 @@ class Task(Base):
         Integer,
         ForeignKey("task.id", ondelete="SET NULL", onupdate="CASCADE"),
         nullable=True,
+    )
+
+    role = relationship(
+        "GroupRole", backref="tasks", foreign_keys="Task.specified_role"
     )
 
 

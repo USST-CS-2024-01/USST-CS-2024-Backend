@@ -130,8 +130,9 @@ class GroupTaskSchema(BaseJsonAbleModel):
     publisher: int
     assignees: List[GroupRoleSchema]
     publish_time: datetime
-    deadline: datetime
+    deadline: Optional[datetime] = None
     update_time: datetime
+    priority: int
 
 
 @openapi.component()

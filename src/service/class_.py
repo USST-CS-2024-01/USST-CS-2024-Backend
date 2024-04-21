@@ -136,7 +136,7 @@ def change_class_task_sequence(request, class_id: int, task_id_list: list[int]) 
         raise ValueError("Task ID list contains duplicates.")
 
     # 获取班级中被锁定的任务
-    locked_tasks = service.task.get_locked_tasks(request, class_id)
+    locked_tasks = service.task.get_locked_tasks(request, class_id, nocheck=True)
 
     with db() as session:
         stmt_class = select(Class).where(Class.id == class_id)

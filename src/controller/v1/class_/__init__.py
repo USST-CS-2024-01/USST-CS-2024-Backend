@@ -58,7 +58,6 @@ async def get_class_list(request, query: ListClassRequest):
         .offset(query.offset)
         .limit(query.limit)
     )
-    count_stmt = select(func.count()).select_from(stmt.subquery())
 
     if query.status:
         stmt = stmt.where(Class.status == query.status)
@@ -72,7 +71,7 @@ async def get_class_list(request, query: ListClassRequest):
             # 此处使用 getattr 函数获取排序字段，asc和desc是function类型，需要调用
             getattr(getattr(Class, query.order_by), query.asc and "asc" or "desc")()
         )
-
+    count_stmt = select(func.count()).select_from(stmt.subquery())
     result_list = []
 
     with db() as session:

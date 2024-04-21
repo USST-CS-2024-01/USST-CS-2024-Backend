@@ -47,10 +47,11 @@ def set_task_attachments(request, task_id: int, file_ids: List[int]):
         session.commit()
 
 
-def check_task_chain(request, class_id) -> List[Task]:
+def check_task_chain(request, class_id, nocheck=False) -> List[Task]:
     """
     检查任务链
 
+    :param nocheck:
     :param request:
     :param class_id:
     :return:
@@ -84,13 +85,13 @@ def check_task_chain(request, class_id) -> List[Task]:
             next_task_id = task.next_task_id
             cnt += 1
 
-        if cnt != len(tasks) - 1:
+        if cnt != len(tasks) - 1 and not nocheck:
             raise ValueError("Task chain is not complete.")
 
     return tasks
 
 
-def get_locked_tasks(request, class_id: int) -> List[Task]:
+def get_locked_tasks(request, class_id: int, nocheck=False) -> List[Task]:
     """
     获取班级中，所有被锁定的任务（锁定的任务指班级中的某一个小组
     已经到达了该任务状态，因此在该任务之前的所有任务[包括该任务]
@@ -98,10 +99,11 @@ def get_locked_tasks(request, class_id: int) -> List[Task]:
 
     :param request:
     :param class_id:
+    :param nocheck:
     :return:
     """
 
-    task_chain = check_task_chain(request, class_id)
+    task_chain = check_task_chain(request, class_id, nocheck)
     locked_tasks = []
 
     with request.app.ctx.db() as session:
@@ -174,3 +176,27 @@ def get_group_locked_tasks(request, class_id: int, group_id: int) -> List[Task]:
                     break
 
     return locked_tasks
+
+
+def get_current_task(request, group_id: int) -> Task:
+    """
+    获取小组当前任务
+
+    :param request:
+    :param group_id:
+    :return:
+    """
+
+    db = request.app.ctx.db
+
+    with db() as session:
+        group = session.query(Group).filter(Group.id == group_id).first()
+        if not group:
+            raise ValueError("Group not found.")
+        if not group.current_task_id:
+            raise ValueError("Current task not found.")
+        task = session.query(Task).filter(Task.id == group.current_task_id).first()
+        if not task:
+            raise ValueError("Task not found.")
+
+        return task
