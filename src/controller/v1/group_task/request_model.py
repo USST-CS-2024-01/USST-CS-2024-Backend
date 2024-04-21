@@ -32,7 +32,9 @@ class AddGroupTaskRequest(BaseModel):
 
 
 class UpdateGroupTaskRequest(BaseModel):
-    name: Optional[str] = Field(None, description="任务名称", min_length=1, max_length=50)
+    name: Optional[str] = Field(
+        None, description="任务名称", min_length=1, max_length=50
+    )
     details: Optional[str] = Field(
         None, description="任务详情，Markdown格式", min_length=1, max_length=1000
     )

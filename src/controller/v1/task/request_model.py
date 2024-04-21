@@ -15,11 +15,15 @@ class CreateTaskRequest(BaseModel):
     grade_percentage: float = Field(
         ..., description="该部分任务占总分比重，所有任务比重之和不建议超过100%"
     )
-    attached_files: Optional[List] = Field(None, description="任务相关附件列表，填写文件ID，文件需要是Class类型")
+    attached_files: Optional[List] = Field(
+        None, description="任务相关附件列表，填写文件ID，文件需要是Class类型"
+    )
 
 
 class UpdateTaskRequest(BaseModel):
-    name: Optional[str] = Field(None, description="任务名称", max_length=500, min_length=1)
+    name: Optional[str] = Field(
+        None, description="任务名称", max_length=500, min_length=1
+    )
     content: Optional[str] = Field(
         None, description="任务简介（支持Markdown格式）", max_length=10000, min_length=1
     )
@@ -29,7 +33,9 @@ class UpdateTaskRequest(BaseModel):
     grade_percentage: Optional[float] = Field(
         None, description="该部分任务占总分比重，所有任务比重之和不建议超过100%"
     )
-    attached_files: Optional[List] = Field(None, description="任务相关附件列表，填写文件ID，文件需要是Class类型")
+    attached_files: Optional[List] = Field(
+        None, description="任务相关附件列表，填写文件ID，文件需要是Class类型"
+    )
 
 
 class SetTaskSequenceRequest(BaseModel):
