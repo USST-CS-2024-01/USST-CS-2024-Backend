@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, and_
 
 from model import Group, ClassMember, GroupMemberRoleStatus, UserType
 from service import class_
@@ -81,3 +81,31 @@ def have_group_access_by_id(
             return False, False, False
 
         return have_group_access(request, group.class_id, group_id)
+
+
+def get_group_manager_user_id(request, class_id: int, group_id: int) -> int:
+    """
+    Get the user ID of the group manager
+
+    :param request: Request
+    :param class_id: Class ID
+    :param group_id: Group ID
+
+    :return: User ID
+    """
+    db = request.app.ctx.db
+
+    stmt = select(ClassMember).where(
+        and_(
+            ClassMember.class_id == class_id,
+            ClassMember.group_id == group_id,
+        )
+    )
+
+    with db() as session:
+        members = session.execute(stmt).scalars().all()
+        for member in members:
+            for role in member.roles:
+                if role.is_manager:
+                    return member.user_id
+        raise ValueError("Group manager not found")

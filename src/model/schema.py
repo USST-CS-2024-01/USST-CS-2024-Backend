@@ -316,4 +316,4 @@ class TaskGroupMemberScoreSchema(BaseJsonAbleModel):
     task_id: int
     group_id: int
     group_manager_score: Optional[dict] = None
-    group_member_scores: Optional[str] = None
+    group_member_scores: Optional[dict] = None
