@@ -4,6 +4,7 @@ from .auth import auth_bp
 from .class_ import class_bp
 from .file import file_bp
 from .group import group_bp
+from .group_meeting import group_meeting_bp
 from .group_task import group_task_bp
 from .role import role_bp
 from .task import task_bp
@@ -18,5 +19,6 @@ bp = Blueprint.group(
     group_bp,
     file_bp,
     group_task_bp,
+    group_meeting_bp,
     url_prefix="/v1",
 )

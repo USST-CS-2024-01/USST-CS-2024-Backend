@@ -2,7 +2,7 @@ import datetime
 
 from sanic import Blueprint
 from sanic_ext import openapi
-from sqlalchemy import select, func
+from sqlalchemy import select, func, and_
 from sqlalchemy.orm import joinedload
 
 import service.class_
@@ -66,7 +66,7 @@ async def get_group_task_list(
     if query.status:
         stmt = stmt.where(GroupTask.status.__eq__(query.status))
     if query.kw:
-        stmt = stmt.where(GroupTask.name.like(f"%{query.kw}%"))
+        stmt = stmt.where(GroupTask.name.ilike(f"%{query.kw}%"))
     if query.priority:
         stmt = stmt.where(GroupTask.priority.__eq__(query.priority))
     if query.order_by:
@@ -119,7 +119,12 @@ async def get_group_task_detail(request, class_id: int, group_id: int, task_id: 
 
     with db() as session:
         task = session.execute(
-            select(GroupTask).where(GroupTask.id.__eq__(task_id))
+            select(GroupTask).where(
+                and_(
+                    GroupTask.id.__eq__(task_id),
+                    GroupTask.group_id.__eq__(group_id),
+                )
+            )
         ).scalar()
 
         if not task:
@@ -293,7 +298,12 @@ async def update_group_task(
             .options(
                 joinedload(GroupTask.assignees), joinedload(GroupTask.related_files)
             )
-            .where(GroupTask.id == task_id)
+            .where(
+                and_(
+                    GroupTask.id == task_id,
+                    GroupTask.group_id == group_id,
+                )
+            )
         ).scalar()
 
         if not group_task:
@@ -395,7 +405,12 @@ async def delete_group_task(request, class_id: int, group_id: int, task_id: int)
 
     with db() as session:
         group_task = session.execute(
-            select(GroupTask).where(GroupTask.id == task_id)
+            select(GroupTask).where(
+                and_(
+                    GroupTask.id == task_id,
+                    GroupTask.group_id == group_id,
+                )
+            )
         ).scalar()
 
         if not group_task:

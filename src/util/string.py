@@ -67,7 +67,7 @@ def mask_string(text: str) -> str:
     return text[:8] + "*" * (len(text) - 8)
 
 
-def timestamp_to_datetime(timestamp: int) -> datetime:
+def timestamp_to_datetime(timestamp: int) -> datetime or None:
     """
     Convert timestamp into datetime format (YYYY-MM-DD HH:MM:SS) suitable for MySQL.
 
@@ -77,4 +77,6 @@ def timestamp_to_datetime(timestamp: int) -> datetime:
     Returns:
     A string representing the datetime in MySQL format.
     """
+    if not timestamp:
+        return None
     return datetime.fromtimestamp(timestamp)

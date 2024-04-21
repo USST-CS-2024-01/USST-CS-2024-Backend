@@ -8,7 +8,6 @@ from sqlalchemy import (
     DateTime,
     Float,
     Enum,
-    ForeignKeyConstraint,
     JSON,
     UniqueConstraint,
 )
@@ -184,15 +183,16 @@ class GroupMeeting(Base):
     meeting_type = Column(String(50), nullable=False)  # 会议类型: tencent, zoom, etc.
     meeting_link = Column(String(500), nullable=True)  # 会议链接
     related_files = relationship("File", secondary="group_meeting_attachment")
-
-    # Indexes
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["group_id"],
-            ["group.id"],
-            name="fk_group_meeting_group",
-            ondelete="CASCADE",
-        ),
+    publisher = Column(
+        Integer,
+        ForeignKey("group_role.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
+    )
+    task_id = Column(
+        Integer,
+        ForeignKey("task.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
     )
 
 

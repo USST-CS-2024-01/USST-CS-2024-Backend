@@ -158,6 +158,8 @@ class GroupMeetingSchema(BaseJsonAbleModel):
     meeting_type: str
     meeting_link: Optional[str] = None
     related_files: List["FileSchema"]
+    task_id: Optional[int] = None
+    publisher: int
 
 
 @openapi.component()
