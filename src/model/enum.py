@@ -31,6 +31,7 @@ class AnnouncementReceiverType(JsonableEnum):
     all = "all"
     class_ = "class"
     group = "group"
+    role = "role"
     individual = "individual"
 
 

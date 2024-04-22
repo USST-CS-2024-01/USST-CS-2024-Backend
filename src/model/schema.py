@@ -93,15 +93,16 @@ class AnnouncementSchema(BaseJsonAbleModel):
     receiver_class_id: Optional[int] = None
     receiver_group_id: Optional[int] = None
     receiver_user_id: Optional[int] = None
-    read_users: List[UserSchema]
+    receiver_role: Optional[UserType] = None
+    read_users: Optional[List[UserSchema]] = None
     publish_time: datetime
+    read: Optional[bool] = None
 
 
 @openapi.component()
 class AnnouncementReadSchema(BaseJsonAbleModel):
     announcement_id: int
     user_id: int
-    read_time: datetime
 
 
 @openapi.component()

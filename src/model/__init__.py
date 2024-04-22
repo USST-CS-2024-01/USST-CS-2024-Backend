@@ -40,6 +40,9 @@ class User(Base):
 
     __secret_fields__ = ["password_hash"]
 
+    classes = relationship("Class", secondary="class_member", viewonly=True)
+    groups = relationship("Group", secondary="class_member", viewonly=True)
+
 
 class Announcement(Base):
     __tablename__ = "announcement"
@@ -69,6 +72,11 @@ class Announcement(Base):
         index=True,
     )
     receiver_user_id = Column(Integer, ForeignKey("user.id"), nullable=True, index=True)
+    receiver_role = Column(
+        Enum(UserType, name="user_type"),
+        nullable=True,
+        index=True,
+    )
     read_users = relationship("User", secondary="announcement_read")
     publish_time = Column(DateTime, nullable=False, index=True)
 
@@ -81,7 +89,6 @@ class AnnouncementRead(Base):
         ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"),
         primary_key=True,
     )
-    read_time = Column(DateTime, nullable=False)
 
 
 class AnnouncementAttachment(Base):

@@ -47,16 +47,11 @@ async def get_class_list(request, query: ListClassRequest):
     db = request.app.ctx.db
 
     # 选择班级信息，包含成员数量、教师列表
-    stmt = (
-        select(Class)
-        .where(
-            or_(
-                Class.members.any(id=request.ctx.user.id),
-                request.ctx.user.user_type == UserType.admin,
-            )
+    stmt = select(Class).where(
+        or_(
+            Class.members.any(id=request.ctx.user.id),
+            request.ctx.user.user_type == UserType.admin,
         )
-        .offset(query.offset)
-        .limit(query.limit)
     )
 
     if query.status:
@@ -72,6 +67,7 @@ async def get_class_list(request, query: ListClassRequest):
             getattr(getattr(Class, query.order_by), query.asc and "asc" or "desc")()
         )
     count_stmt = select(func.count()).select_from(stmt.subquery())
+    stmt = stmt.offset(query.offset).limit(query.limit)
     result_list = []
 
     with db() as session:

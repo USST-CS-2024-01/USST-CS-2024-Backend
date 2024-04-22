@@ -20,9 +20,9 @@ from model.response_model import (
     BaseDataResponse,
 )
 from model.schema import UserSchema
-from util.parameter import generate_parameters_from_pydantic
-from util import encrypt
 from service import user as user_service
+from util import encrypt
+from util.parameter import generate_parameters_from_pydantic
 
 user_bp = Blueprint("user", url_prefix="/user")
 
@@ -82,8 +82,8 @@ async def get_user_list(request, query: ListUserRequest):
             # 此处使用 getattr 函数获取排序字段，asc和desc是function类型，需要调用
             getattr(getattr(User, query.order_by), query.asc and "asc" or "desc")()
         )
-    stmt = stmt.offset(query.offset).limit(query.limit)
     count_stmt = select(func.count()).select_from(stmt.subquery())
+    stmt = stmt.offset(query.offset).limit(query.limit)
 
     with db() as sess:
         users = sess.execute(stmt).scalars().all()

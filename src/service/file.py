@@ -348,3 +348,28 @@ def check_file_in_group(request, group_id: int, file_ids: List[int]) -> List[Fil
         if len(files) != len(file_ids):
             raise ValueError("Not all files are in the group")
         return files
+
+
+async def grant_file_access(
+    request, file_id: int, user_id: int, access: Dict[str, Any]
+):
+    """
+    Grant file access
+    :param request: Request
+    :param file_id: File ID
+    :param user_id: User ID
+    :param access: Access
+    :return: None
+    """
+    cache = request.app.ctx.cache
+
+    tmp_access_key = f"file_access:{user_id}:{file_id}"
+    d_access = {
+        "read": False,
+        "write": False,
+        "delete": False,
+        "annotate": False,
+        "rename": False,
+    }
+    d_access.update(access)
+    await cache.set_pickle(tmp_access_key, d_access, expire=3600)
