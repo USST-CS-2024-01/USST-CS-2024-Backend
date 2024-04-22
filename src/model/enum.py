@@ -79,8 +79,8 @@ class RepoRecordStatus(JsonableEnum):
 
 @openapi.component()
 class DeliveryType(JsonableEnum):
-    group = "group"
-    individual = "individual"
+    file = "file"
+    repo = "repo"
 
 
 @openapi.component()

@@ -274,6 +274,8 @@ class Group(Base):
         index=True,
     )
 
+    current_task = relationship("Task", backref="group", foreign_keys="Group.current_task_id")
+
 
 class File(Base):
     __tablename__ = "file"
@@ -464,6 +466,9 @@ class DeliveryItem(Base):
         nullable=False,
         index=True,
     )
+
+    file = relationship("File", backref="delivery_items")
+    repo = relationship("RepoRecord", backref="delivery_items")
 
     # Indexes
     __table_args__ = (UniqueConstraint("item_type", "item_file_id", "item_repo_id"),)

@@ -255,6 +255,8 @@ class DeliveryItemSchema(BaseJsonAbleModel):
     item_file_id: Optional[int] = None
     item_repo_id: Optional[int] = None
     delivery_id: int
+    file: Optional[FileSchema] = None
+    repo: Optional[RepoRecordSchema] = None
 
 
 @openapi.component()

@@ -3,6 +3,7 @@ from sanic import Blueprint
 from .announcement import announcement_bp
 from .auth import auth_bp
 from .class_ import class_bp
+from .delivery import delivery_bp
 from .file import file_bp
 from .group import group_bp
 from .group_meeting import group_meeting_bp
@@ -24,5 +25,6 @@ bp = Blueprint.group(
     group_meeting_bp,
     group_member_score_bp,
     announcement_bp,
+    delivery_bp,
     url_prefix="/v1",
 )

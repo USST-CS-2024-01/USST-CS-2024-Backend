@@ -373,3 +373,43 @@ async def grant_file_access(
     }
     d_access.update(access)
     await cache.set_pickle(tmp_access_key, d_access, expire=3600)
+
+
+async def copy_file_for_delivery(request, file_id: int, delivery_id: int) -> File:
+    """
+    Copy file for delivery
+    :param request: Request
+    :param file_id: File ID
+    :param delivery_id: Delivery ID
+    :return: None
+    """
+    db = request.app.ctx.db
+    goflet = request.app.ctx.goflet
+
+    with db() as session:
+        file = session.execute(select(File).where(File.id == file_id)).scalar()
+        if not file:
+            raise ValueError("File not found")
+        file_name = f"delivery_{delivery_id}_{int(time.time())}_{uuid4()}_{file.name}"
+
+        file_path = generate_storage_path(
+            FileOwnerType.delivery, delivery_id, file_name
+        )
+        await goflet.copy_file(file.file_key, file_path)
+
+        new_file = File(
+            name=file_name,
+            file_key=file_path,
+            file_type=file.file_type,
+            file_size=file.file_size,
+            owner_type=FileOwnerType.delivery,
+            owner_delivery_id=delivery_id,
+            create_date=datetime.now(),
+            modify_date=datetime.now(),
+        )
+
+        session.add(new_file)
+        session.commit()
+        session.refresh(new_file)
+
+        return new_file
