@@ -12,17 +12,29 @@ import service.group
 from controller.v1.delivery.request_model import (
     CreateDeliveryRequest,
     AddDeliveryItemRequest,
+    AcceptDeliveryRequest,
+    RejectDeliveryRequest,
+    ScoreDetailRequest,
 )
-from middleware.auth import need_login
+from middleware.auth import need_login, need_role
 from middleware.validator import validate
-from model import Delivery, DeliveryStatus, DeliveryType, DeliveryItem
+from model import (
+    Delivery,
+    DeliveryStatus,
+    DeliveryType,
+    DeliveryItem,
+    RepoRecord,
+    RepoRecordStatus,
+    UserType,
+    TeacherScore,
+)
 from model.response_model import (
     ErrorResponse,
     BaseListResponse,
     BaseResponse,
     BaseDataResponse,
 )
-from model.schema import DeliverySchema, DeliveryItemSchema
+from model.schema import DeliverySchema, DeliveryItemSchema, TeacherScoreSchema
 
 delivery_bp = Blueprint("delivery")
 
@@ -263,8 +275,30 @@ async def add_delivery_item(
             )
             body.item_id = copied_file.id
         elif DeliveryType(body.item_type) == DeliveryType.repo:
-            # TODO: Check repo access
-            pass
+            dup_stmt = select(DeliveryItem).where(
+                and_(
+                    DeliveryItem.item_type == body.item_type,
+                    DeliveryItem.item_repo_id == body.item_id,
+                )
+            )
+            dup_item = session.execute(dup_stmt).scalar()
+            if dup_item:
+                return ErrorResponse.new_error(
+                    code=403, message="Item already exists in the draft."
+                )
+
+            stmt = select(RepoRecord).where(
+                and_(
+                    RepoRecord.group_id == group_id,
+                    RepoRecord.id == body.item_id,
+                    RepoRecord.status == RepoRecordStatus.completed,
+                )
+            )
+            repo_record = session.execute(stmt).scalar()
+            if not repo_record:
+                return ErrorResponse.new_error(
+                    code=404, message="Repo record not found or not completed."
+                )
         else:
             return ErrorResponse.new_error(code=400, message="Invalid item type.")
 
@@ -327,6 +361,344 @@ async def delete_delivery_item(
             return ErrorResponse.new_error(code=403, message="Item not in the draft.")
 
         session.delete(delivery_item)
+        session.commit()
+
+        return BaseResponse().json_response()
+
+
+@delivery_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>/task/<task_id:int>/delivery/draft/submit",
+    methods=["POST"],
+)
+@openapi.summary("提交任务提交草稿")
+@openapi.tag("任务提交接口")
+@need_login()
+async def submit_draft(request, class_id: int, group_id: int, task_id: int):
+    db = request.app.ctx.db
+    group, class_member, is_manager = service.group.have_group_access(
+        request, class_id=class_id, group_id=group_id
+    )
+    if not group:
+        return ErrorResponse.new_error(
+            code=403, message="You don't have the permission to access the group."
+        )
+
+    try:
+        service.delivery.check_can_create_delivery(
+            request, task_id=task_id, group_id=group_id
+        )
+    except ValueError as e:
+        return ErrorResponse.new_error(code=403, message=str(e))
+
+    with db() as session:
+        draft: Delivery = service.delivery.get_task_draft(request, task_id, group_id)
+        if not draft:
+            return ErrorResponse.new_error(code=404, message="Draft not found.")
+
+        if is_manager:
+            draft.delivery_status = DeliveryStatus.teacher_review
+        else:
+            draft.delivery_status = DeliveryStatus.leader_review
+
+        session.add(draft)
+        session.commit()
+
+        return BaseDataResponse().json_response()
+
+
+@delivery_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>/task/<task_id:int>/delivery/review",
+    methods=["GET"],
+)
+@openapi.summary("获取任务提交审核")
+@openapi.tag("任务提交接口")
+@need_login()
+async def get_review(request, class_id: int, group_id: int, task_id: int):
+    db = request.app.ctx.db
+
+    group, class_member, is_manager = service.group.have_group_access(
+        request, class_id=class_id, group_id=group_id
+    )
+    if not group:
+        return ErrorResponse.new_error(
+            code=403, message="You don't have the permission to access the group."
+        )
+
+    with db() as session:
+        delivery = service.delivery.get_task_latest_delivery(request, task_id, group_id)
+        if not delivery:
+            return ErrorResponse.new_error(code=404, message="Delivery not found.")
+        session.add(delivery)
+
+        return BaseDataResponse(
+            data=DeliverySchema.model_validate(delivery)
+        ).json_response()
+
+
+@delivery_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>/task/<task_id:int>/delivery/review/approve",
+    methods=["POST"],
+)
+@openapi.summary("审核任务提交通过")
+@openapi.tag("任务提交接口")
+@need_login()
+@validate(json=AcceptDeliveryRequest)
+async def accept_review(
+    request, class_id: int, group_id: int, task_id: int, body: AcceptDeliveryRequest
+):
+    db = request.app.ctx.db
+    user = request.ctx.user
+
+    group, class_member, is_manager = service.group.have_group_access(
+        request, class_id=class_id, group_id=group_id
+    )
+    if not group:
+        return ErrorResponse.new_error(
+            code=403, message="You don't have the permission to access the group."
+        )
+
+    if not is_manager:
+        return ErrorResponse.new_error(
+            code=403, message="You don't have the permission to access the group."
+        )
+
+    with db() as session:
+        delivery = service.delivery.get_task_latest_delivery(request, task_id, group_id)
+        if not delivery:
+            return ErrorResponse.new_error(code=404, message="Delivery not found.")
+        session.add(delivery)
+
+        if delivery.delivery_status not in [
+            DeliveryStatus.leader_review,
+            DeliveryStatus.teacher_review,
+            DeliveryStatus.teacher_rejected,
+        ]:
+            return ErrorResponse.new_error(
+                code=403, message="Delivery status is not review."
+            )
+
+        if (
+            delivery.delivery_status == DeliveryStatus.teacher_review
+            and user.user_type == UserType.student
+        ):
+            return ErrorResponse.new_error(
+                code=403, message="You don't have the permission to do it."
+            )
+
+        if user.user_type != UserType.student:
+            delivery.delivery_status = DeliveryStatus.teacher_approved
+            delivery.task_grade_percentage = body.score
+            if not body.score:
+                return ErrorResponse.new_error(code=400, message="Score is required.")
+        else:
+            delivery.delivery_status = DeliveryStatus.teacher_review
+
+        session.add(delivery)
+        session.commit()
+
+        return BaseDataResponse().json_response()
+
+
+@delivery_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>/task/<task_id:int>/delivery/review/reject",
+    methods=["POST"],
+)
+@openapi.summary("审核任务提交拒绝")
+@openapi.tag("任务提交接口")
+@need_login()
+@validate(json=RejectDeliveryRequest)
+async def reject_review(
+    request, class_id: int, group_id: int, task_id: int, body: RejectDeliveryRequest
+):
+    db = request.app.ctx.db
+    user = request.ctx.user
+
+    group, class_member, is_manager = service.group.have_group_access(
+        request, class_id=class_id, group_id=group_id
+    )
+    if not group:
+        return ErrorResponse.new_error(
+            code=403, message="You don't have the permission to access the group."
+        )
+
+    if not is_manager:
+        return ErrorResponse.new_error(
+            code=403, message="You don't have the permission to do it."
+        )
+
+    with db() as session:
+        delivery = service.delivery.get_task_latest_delivery(request, task_id, group_id)
+        if not delivery:
+            return ErrorResponse.new_error(code=404, message="Delivery not found.")
+        session.add(delivery)
+
+        if delivery.delivery_status not in [
+            DeliveryStatus.leader_review,
+            DeliveryStatus.teacher_review,
+            DeliveryStatus.teacher_approved,
+        ]:
+            return ErrorResponse.new_error(
+                code=403, message="Delivery status is not able to reject."
+            )
+
+        if (
+            delivery.delivery_status != DeliveryStatus.leader_review
+            and user.user_type == UserType.student
+        ):
+            return ErrorResponse.new_error(
+                code=403, message="You don't have the permission to do it."
+            )
+
+        if delivery.delivery_status == DeliveryStatus.leader_review:
+            delivery.delivery_status = DeliveryStatus.leader_rejected
+        else:
+            delivery.delivery_status = DeliveryStatus.teacher_rejected
+        delivery.delivery_comments = body.delivery_comments
+
+        session.add(delivery)
+        session.commit()
+
+        return BaseDataResponse().json_response()
+
+
+@delivery_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>/task/<task_id:int>/score",
+    methods=["POST"],
+)
+@openapi.summary("评分任务提交")
+@openapi.tag("任务提交接口")
+@need_login()
+@need_role([UserType.admin, UserType.teacher])
+@validate(json=ScoreDetailRequest)
+async def score_review(
+    request, class_id: int, group_id: int, task_id: int, body: ScoreDetailRequest
+):
+    db = request.app.ctx.db
+    group, class_member, is_manager = service.group.have_group_access(
+        request, class_id=class_id, group_id=group_id
+    )
+    if not group:
+        return ErrorResponse.new_error(
+            code=403, message="You don't have the permission to access the group."
+        )
+
+    with db() as session:
+        delivery = service.delivery.get_task_latest_delivery(request, task_id, group_id)
+        if not delivery:
+            return ErrorResponse.new_error(code=404, message="Delivery not found.")
+        if delivery.delivery_status != DeliveryStatus.teacher_approved:
+            return ErrorResponse.new_error(
+                code=403, message="Delivery status is not approved."
+            )
+
+        user_id = body.user_id
+        session.add(group)
+        group_member_ids = [
+            member.user_id for member in group.members if not member.is_teacher
+        ]
+        if user_id not in group_member_ids:
+            return ErrorResponse.new_error(
+                code=403, message="User is not in the group."
+            )
+
+        teacher_score = TeacherScore(
+            task_id=task_id,
+            user_id=body.user_id,
+            score=body.score,
+            score_time=datetime.now(),
+            score_details=body.score_details,
+        )
+        session.merge(teacher_score)
+        session.commit()
+
+        return BaseDataResponse().json_response()
+
+
+@delivery_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>/task/<task_id:int>/score",
+    methods=["GET"],
+)
+@openapi.summary("获取任务提交评分")
+@openapi.tag("任务提交接口")
+@need_login()
+@need_role([UserType.admin, UserType.teacher])
+async def get_score_review(request, class_id: int, group_id: int, task_id: int):
+    db = request.app.ctx.db
+
+    group, class_member, is_manager = service.group.have_group_access(
+        request, class_id=class_id, group_id=group_id
+    )
+    if not group:
+        return ErrorResponse.new_error(
+            code=403, message="You don't have the permission to access the group."
+        )
+
+    with db() as session:
+        delivery = service.delivery.get_task_latest_delivery(request, task_id, group_id)
+        if not delivery:
+            return ErrorResponse.new_error(code=404, message="Delivery not found.")
+        if delivery.delivery_status != DeliveryStatus.teacher_approved:
+            return ErrorResponse.new_error(
+                code=403, message="Delivery status is not approved."
+            )
+
+        score_list, _ = service.delivery.get_group_task_score(
+            request, group.current_task_id, group_id
+        )
+        session.add_all(score_list)
+
+        return BaseListResponse(
+            data=[
+                TeacherScoreSchema.model_validate(teacher_score)
+                for teacher_score in score_list
+            ]
+        ).json_response()
+
+
+@delivery_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>/next_task",
+    methods=["POST"],
+)
+@openapi.summary("允许小组提交下一个任务")
+@openapi.tag("任务提交接口")
+@need_login()
+@need_role([UserType.admin, UserType.teacher])
+async def next_task(request, class_id: int, group_id: int):
+    db = request.app.ctx.db
+
+    group, class_member, is_manager = service.group.have_group_access(
+        request, class_id=class_id, group_id=group_id
+    )
+    if not group:
+        return ErrorResponse.new_error(
+            code=403, message="You don't have the permission to access the group."
+        )
+
+    with db() as session:
+        latest_delivery = service.delivery.get_task_latest_delivery(
+            request, group.current_task_id, group_id
+        )
+        if not latest_delivery:
+            return ErrorResponse.new_error(
+                code=404, message="No delivery for current task."
+            )
+        if latest_delivery.delivery_status != DeliveryStatus.teacher_approved:
+            return ErrorResponse.new_error(
+                code=403, message="Current task delivery is not approved."
+            )
+        _, is_complete = service.delivery.get_group_task_score(
+            request, group.current_task_id, group_id
+        )
+        if not is_complete:
+            return ErrorResponse.new_error(
+                code=403, message="Current task score is not complete."
+            )
+
+        session.add(group)
+        next_task_id = group.current_task.next_task_id
+        if not next_task_id:
+            return ErrorResponse.new_error(code=404, message="Already the last task.")
+        group.current_task_id = next_task_id
         session.commit()
 
         return BaseResponse().json_response()

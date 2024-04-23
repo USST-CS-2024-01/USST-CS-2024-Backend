@@ -10,6 +10,7 @@ from model import (
     ClassStatus,
     ClassMember,
     Task,
+    TeacherScore,
 )
 
 
@@ -119,12 +120,20 @@ def check_can_create_delivery(request, task_id: int, group_id: int) -> bool:
     with db() as session:
         stmt = select(Group).where(Group.id.__eq__(group_id))
         group = session.execute(stmt).scalar()
+        locked_tasks = [
+            x.id
+            for x in service.task.get_group_locked_tasks(
+                request, group.class_id, group_id
+            )
+        ]
+        session.add(group)
+
         if not group:
             raise ValueError("小组不存在")
         if group.clazz.status != ClassStatus.teaching:
             raise ValueError("班级不在教学状态，无法提交任务")
-        if group.current_task_id != task_id:
-            raise ValueError("仅允许提交当前任务的交付物")
+        if group.current_task_id not in locked_tasks:
+            raise ValueError("请勿超越当前任务提交任务")
 
     latest_delivery: Delivery = get_task_latest_delivery(request, task_id, group_id)
     if latest_delivery:
@@ -167,6 +176,8 @@ def get_task_draft(request, task_id: int, group_id: int) -> (Delivery or bool):
 
     with db() as session:
         delivery = session.execute(stmt).scalar()
+        if not delivery:
+            raise ValueError("未找到草稿")
         return delivery
 
 
@@ -192,12 +203,18 @@ def check_can_create_draft(
         if not group:
             raise ValueError("You don't have the permission to access the group.")
 
+        locked_tasks = [
+            x.id
+            for x in service.task.get_group_locked_tasks(
+                request, group.class_id, group_id
+            )
+        ]
         session.add(group)
 
         if group.clazz.status != ClassStatus.teaching:
             raise ValueError("班级不在教学状态，无法创建草稿")
-        if group.current_task_id != task_id:
-            raise ValueError("仅允许提交当前任务的交付物")
+        if group.current_task_id not in locked_tasks:
+            raise ValueError("请勿超越当前任务创建草稿")
 
         latest_delivery = get_task_latest_delivery(request, task_id, group_id)
         if latest_delivery:
@@ -220,3 +237,45 @@ def check_can_create_draft(
             raise ValueError("您没有权限提交该任务的交付物")
 
     return group, class_member, is_manager, current_task
+
+
+def get_group_task_score(
+    request, task_id: int, group_id: int
+) -> (TeacherScore or bool):
+    """
+    Get the score of the task
+
+    :param request: Request
+    :param task_id: Task ID
+    :param group_id: Group ID
+
+    :return: TaskGroupMemberScore
+    """
+    db = request.app.ctx.db
+
+    with db() as session:
+        stmt = select(ClassMember.user_id).where(
+            and_(
+                ClassMember.group_id == group_id,
+                ClassMember.is_teacher == False,
+            )
+        )
+        member_ids = session.execute(stmt).scalars().all()
+        if not member_ids:
+            raise ValueError("小组成员为空")
+
+        stmt = select(TeacherScore).where(
+            and_(
+                TeacherScore.task_id == task_id,
+                TeacherScore.user_id.in_(member_ids),
+            )
+        )
+        score_list = session.execute(stmt).scalars().all()
+
+        member_ids_set = set(member_ids)
+        for item in score_list:
+            member_ids_set.remove(item.user_id)
+
+        if member_ids_set:
+            return score_list, False
+        return score_list, True

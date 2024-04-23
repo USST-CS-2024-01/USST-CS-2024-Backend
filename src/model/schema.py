@@ -291,6 +291,7 @@ class TeacherScoreSchema(BaseJsonAbleModel):
     score: float
     score_time: datetime
     score_details: Optional[dict] = None
+    user: UserSchema
 
 
 @openapi.component()

@@ -576,6 +576,8 @@ class TeacherScore(Base):
     score_time = Column(DateTime, nullable=False, index=True)
     score_details = Column(JSON, nullable=True)
 
+    user = relationship("User", backref="teacher_scores")
+
 
 class Log(Base):
     __tablename__ = "log"
