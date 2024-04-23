@@ -45,3 +45,9 @@ onlyoffice:
   endpoint: "http://localhost:18000"
   # OnlyOffice API Key
   secret: "secret"
+
+kafka:
+  # Kafka Host
+  host: localhost
+  # Kafka Port
+  port: 9092
