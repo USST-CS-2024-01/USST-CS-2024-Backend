@@ -9,6 +9,7 @@ from .group import group_bp
 from .group_meeting import group_meeting_bp
 from .group_member_score import group_member_score_bp
 from .group_task import group_task_bp
+from .repo_record import repo_record_bp
 from .role import role_bp
 from .task import task_bp
 from .user import user_bp
@@ -26,5 +27,6 @@ bp = Blueprint.group(
     group_member_score_bp,
     announcement_bp,
     delivery_bp,
+    repo_record_bp,
     url_prefix="/v1",
 )

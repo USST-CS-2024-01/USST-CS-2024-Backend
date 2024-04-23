@@ -2,7 +2,7 @@ import yaml
 from sanic.config import Config as SanicConfig
 
 CONFIG_FILE = "config.yaml"
-INJECTION_MODULES = ["goflet", "mysql", "redis", "onlyoffice", "api"]
+INJECTION_MODULES = ["goflet", "mysql", "redis", "onlyoffice", "api", "kafka"]
 
 
 def load_config(config_file: str = CONFIG_FILE):

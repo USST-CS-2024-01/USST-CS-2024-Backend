@@ -244,7 +244,7 @@ class RepoRecordSchema(BaseJsonAbleModel):
     commit_stats: Optional[dict] = None
     code_line_stats: Optional[dict] = None
     create_time: datetime
-    stat_time: datetime
+    stat_time: Optional[datetime] = None
     user_repo_mapping: Optional[dict] = None
 
 

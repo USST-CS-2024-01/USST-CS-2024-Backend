@@ -116,6 +116,14 @@ class Goflet:
         async with req as result:
             result.raise_for_status()
 
+    def create_complete_upload_session(self, file_path: str) -> str:
+        """
+        Create complete upload session
+        :param file_path: File path
+        :return: URL with query parameters
+        """
+        return self.generate_url(f"/upload/{file_path}", "POST", {})
+
     async def complete_upload_session(self, file_path: str):
         """
         Complete upload session

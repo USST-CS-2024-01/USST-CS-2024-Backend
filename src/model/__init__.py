@@ -274,7 +274,9 @@ class Group(Base):
         index=True,
     )
 
-    current_task = relationship("Task", backref="group", foreign_keys="Group.current_task_id")
+    current_task = relationship(
+        "Task", backref="group", foreign_keys="Group.current_task_id"
+    )
 
 
 class File(Base):
@@ -440,8 +442,15 @@ class RepoRecord(Base):
     commit_stats = Column(JSON, nullable=True)
     code_line_stats = Column(JSON, nullable=True)
     create_time = Column(DateTime, nullable=False, index=True)
-    stat_time = Column(DateTime, nullable=False, index=True)
+    stat_time = Column(DateTime, nullable=True, index=True)
     user_repo_mapping = Column(JSON, nullable=True)
+    archive_file_id = Column(
+        Integer,
+        ForeignKey("file.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    archive = relationship("File", backref="repo_records")
 
 
 class DeliveryItem(Base):
