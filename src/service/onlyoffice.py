@@ -2,6 +2,7 @@ import base64
 import copy
 import os
 import time
+import uuid
 from datetime import datetime
 
 import jwt
@@ -292,3 +293,32 @@ async def convert_to_no_comment(request, file: File, new_file_name: str) -> File
         session.commit()
 
     return new_file
+
+
+async def generate_file_conversion_params(
+    request, file: File, target_file_type: str
+) -> dict:
+    """
+    生成文件转换参数
+    :param request:             Request
+    :param file:                File
+    :param target_file_type:    目标文件类型
+    :return:                    文件转换参数
+    """
+    goflet = request.app.ctx.goflet
+
+    params = {
+        "async": False,
+        "filetype": file.name.split(".")[-1],
+        "outputtype": target_file_type,
+        "url": goflet.create_download_url(file.file_key),
+        "key": f"{int(time.time())}_{uuid.uuid4()}",
+    }
+    token = jwt.encode(
+        params,
+        request.app.config["ONLYOFFICE_SECRET"],
+    )
+
+    return {
+        "token": token,
+    }

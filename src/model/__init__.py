@@ -553,9 +553,9 @@ class AIDocScoreRecord(Base):
         index=True,
     )
     create_time = Column(DateTime, nullable=False, index=True)
-    score_time = Column(DateTime, nullable=False, index=True)
+    score_time = Column(DateTime, nullable=True, index=True)
     doc_evaluation = Column(JSON, nullable=True)
-    overall_score = Column(Float, nullable=False)
+    overall_score = Column(Float, nullable=True)
 
 
 class TeacherScore(Base):

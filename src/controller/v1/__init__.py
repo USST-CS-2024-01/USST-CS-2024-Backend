@@ -1,5 +1,6 @@
 from sanic import Blueprint
 
+from .ai import ai_bp
 from .announcement import announcement_bp
 from .auth import auth_bp
 from .class_ import class_bp
@@ -28,5 +29,6 @@ bp = Blueprint.group(
     announcement_bp,
     delivery_bp,
     repo_record_bp,
+    ai_bp,
     url_prefix="/v1",
 )

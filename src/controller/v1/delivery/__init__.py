@@ -136,11 +136,14 @@ async def create_delivery(
     except ValueError as e:
         return ErrorResponse.new_error(code=403, message=str(e))
 
-    draft = service.delivery.get_task_draft(request, task_id, group_id)
-    if draft:
-        return ErrorResponse.new_error(
-            code=403, message="You already have a draft for this task."
-        )
+    try:
+        draft = service.delivery.get_task_draft(request, task_id, group_id)
+        if draft:
+            return ErrorResponse.new_error(
+                code=403, message="You already have a draft for this task."
+            )
+    except ValueError as e:
+        pass
 
     with db() as session:
         delivery = Delivery(
@@ -459,7 +462,7 @@ async def accept_review(
 
     if not is_manager:
         return ErrorResponse.new_error(
-            code=403, message="You don't have the permission to access the group."
+            code=403, message="You don't have the permission to review the delivery."
         )
 
     with db() as session:

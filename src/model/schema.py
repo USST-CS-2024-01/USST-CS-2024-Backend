@@ -279,9 +279,9 @@ class AIDocScoreRecordSchema(BaseJsonAbleModel):
     file_id: int
     status: AIDocStatus
     create_time: datetime
-    score_time: datetime
+    score_time: Optional[datetime] = None
     doc_evaluation: Optional[dict] = None
-    overall_score: float
+    overall_score: Optional[float] = None
 
 
 @openapi.component()
