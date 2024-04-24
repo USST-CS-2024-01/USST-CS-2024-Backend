@@ -646,7 +646,7 @@ async def get_score_review(request, class_id: int, group_id: int, task_id: int):
             )
 
         score_list, _ = service.delivery.get_group_task_score(
-            request, group.current_task_id, group_id
+            request, task_id, group_id
         )
         session.add_all(score_list)
 

@@ -257,7 +257,7 @@ def get_group_task_score(
         stmt = select(ClassMember.user_id).where(
             and_(
                 ClassMember.group_id == group_id,
-                ClassMember.is_teacher == False,
+                ClassMember.is_teacher.is_(False),
             )
         )
         member_ids = session.execute(stmt).scalars().all()
