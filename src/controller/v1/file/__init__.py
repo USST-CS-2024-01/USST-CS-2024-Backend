@@ -4,17 +4,22 @@ import traceback
 from sanic import Blueprint, html, redirect, raw
 from sanic import json as sanic_json
 from sanic_ext.extensions.openapi import openapi
+from sqlalchemy import select, func, and_, or_
 
 import service.class_
 import service.file
 import service.group
 import service.onlyoffice
-from controller.v1.file.request_model import CreateFileRequest, UpdateFileRequest
+from controller.v1.file.request_model import (
+    CreateFileRequest,
+    UpdateFileRequest,
+    GetFileListRequest,
+)
 from controller.v1.file.response_model import UploadSessionResponse
 from middleware.auth import need_login
 from middleware.validator import validate
-from model import FileOwnerType, UserType, Group
-from model.response_model import ErrorResponse, BaseDataResponse
+from model import FileOwnerType, UserType, Group, File, ClassMember
+from model.response_model import ErrorResponse, BaseDataResponse, BaseListResponse
 from model.schema import FileSchema
 
 file_bp = Blueprint("file")
@@ -329,3 +334,68 @@ async def convert_to_no_comment_post(request, file_id: int, body: UpdateFileRequ
 
     except Exception as e:
         return ErrorResponse.new_error(400, str(e))
+
+
+@file_bp.route("/file/list", methods=["GET"])
+@openapi.summary("获取文件列表")
+@openapi.tag("文件接口")
+@need_login()
+@validate(query=GetFileListRequest)
+async def get_file_list(request, query: GetFileListRequest):
+    user = request.ctx.user
+    db = request.app.ctx.db
+
+    stmt = select(File)
+    or_stmt = [File.owner_user_id == user.id]
+    and_stmt = []
+
+    if query.class_id:
+        and_stmt.append(File.owner_clazz_id == query.class_id)
+    if query.group_id:
+        and_stmt.append(File.owner_group_id == query.group_id)
+    if query.user_id:
+        and_stmt.append(File.owner_user_id == query.user_id)
+    if query.kw:
+        and_stmt.append(File.name.like(f"%{query.kw}%"))
+    if query.order_by:
+        stmt = stmt.order_by(
+            # 此处使用 getattr 函数获取排序字段，asc和desc是function类型，需要调用
+            getattr(getattr(File, query.order_by), query.asc and "asc" or "desc")()
+        )
+
+    with db() as session:
+        ids_stmt = select(ClassMember).where(ClassMember.user_id == user.id)
+        class_member = session.execute(ids_stmt).scalars().all()
+        class_ids = [item.class_id for item in class_member]
+        or_stmt.append(File.owner_clazz_id.in_(class_ids))
+        group_ids = []
+
+        for clazz in class_member:
+            if clazz.is_teacher:
+                ids = (
+                    session.query(Group.id)
+                    .filter(Group.class_id == clazz.class_id)
+                    .all()
+                )
+                ids = [item.id for item in ids]
+                group_ids.extend(ids)
+            else:
+                if clazz.group_id:
+                    group_ids.append(clazz.group_id)
+
+        or_stmt.append(File.owner_group_id.in_(group_ids))
+        and_stmt.append(or_(*or_stmt))
+
+        stmt = stmt.where(and_(*and_stmt))
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        stmt = stmt.limit(query.limit).offset(query.offset)
+
+        result = session.execute(stmt).scalars().all()
+        total = session.execute(count_stmt).scalar()
+
+        return BaseListResponse(
+            data=[FileSchema.model_validate(item) for item in result],
+            total=total,
+            page=query.page,
+            page_size=query.page_size,
+        ).json_response()
