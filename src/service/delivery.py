@@ -14,9 +14,7 @@ from model import (
 )
 
 
-def get_task_latest_delivery(
-    request, task_id: int, group_id: int
-) -> (Delivery or bool):
+def get_task_latest_delivery(request, task_id: int, group_id: int) -> Delivery or bool:
     """
     Get the latest delivery of the task
 
@@ -149,7 +147,7 @@ def check_can_create_delivery(request, task_id: int, group_id: int) -> bool:
     return True
 
 
-def get_task_draft(request, task_id: int, group_id: int) -> (Delivery or bool):
+def get_task_draft(request, task_id: int, group_id: int) -> Delivery or bool:
     """
     Get the draft of the task
 
@@ -239,9 +237,7 @@ def check_can_create_draft(
     return group, class_member, is_manager, current_task
 
 
-def get_group_task_score(
-    request, task_id: int, group_id: int
-) -> (TeacherScore or bool):
+def get_group_task_score(request, task_id: int, group_id: int) -> TeacherScore or bool:
     """
     Get the score of the task
 

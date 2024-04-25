@@ -25,7 +25,9 @@ class CreateGroupMeetingRequest(BaseModel):
 
 
 class UpdateGroupMeetingRequest(BaseModel):
-    name: Optional[str] = Field(None, description="会议名称", min_length=1, max_length=50)
+    name: Optional[str] = Field(
+        None, description="会议名称", min_length=1, max_length=50
+    )
     start_time: Optional[int] = Field(None, description="开始时间")
     end_time: Optional[int] = Field(None, description="结束时间")
     meeting_type: Optional[str] = Field(None, description="会议类型")

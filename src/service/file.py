@@ -172,7 +172,7 @@ async def check_has_access(request, file_id: int) -> (File, Dict[str, Any]):
     }
 
     with db() as session:
-        file = session.execute(select(File).where(File.id == file_id)).scalar()
+        file = session.execute(select(File).where(File.id.__eq__(file_id))).scalar()
         if not file:
             raise ValueError("File not found")
 

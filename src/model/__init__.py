@@ -577,6 +577,7 @@ class TeacherScore(Base):
     score_details = Column(JSON, nullable=True)
 
     user = relationship("User", backref="teacher_scores")
+    task = relationship("Task", backref="teacher_scores")
 
 
 class Log(Base):

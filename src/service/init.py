@@ -1,5 +1,7 @@
+from datetime import datetime
+
 import util.string
-from model import Class, User, Task, GroupRole
+from model import Class, User, Task, GroupRole, Config
 from model.enum import AccountStatus, ClassStatus, UserType
 from util import encrypt
 
@@ -202,7 +204,21 @@ def database_init(db):
         ),
     ]
 
+    config_default = {
+        "course:title": "软件协同设计A",
+        "openai:endpoint": "https://api.openai.com/",
+        "openai:secret_key": "sk-xxx",
+        "openai:model": "gpt-4-turbo",
+        "git:ssh_public_key": "ssh-rsa xxx",
+        "git:ssh_private_key": "",
+    }
+
     with db() as db:
+        for key, value in config_default.items():
+            if not db.query(Config).filter(Config.key == key).first():
+                db.add(Config(key=key, value=value, update_time=datetime.now()))
+        db.commit()
+
         if not db.query(User).filter(User.id == 1).first():
             db.add(stmt_create_admin_user)
             db.commit()

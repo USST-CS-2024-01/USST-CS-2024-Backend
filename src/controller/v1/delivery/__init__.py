@@ -307,12 +307,16 @@ async def add_delivery_item(
 
         delivery_item = DeliveryItem(
             item_type=body.item_type,
-            item_file_id=body.item_id
-            if DeliveryType(body.item_type) == DeliveryType.file
-            else None,
-            item_repo_id=body.item_id
-            if DeliveryType(body.item_type) == DeliveryType.repo
-            else None,
+            item_file_id=(
+                body.item_id
+                if DeliveryType(body.item_type) == DeliveryType.file
+                else None
+            ),
+            item_repo_id=(
+                body.item_id
+                if DeliveryType(body.item_type) == DeliveryType.repo
+                else None
+            ),
             delivery_id=delivery.id,
         )
         session.add(delivery_item)

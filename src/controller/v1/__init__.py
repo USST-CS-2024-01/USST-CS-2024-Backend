@@ -14,6 +14,8 @@ from .repo_record import repo_record_bp
 from .role import role_bp
 from .task import task_bp
 from .user import user_bp
+from .score import score_bp
+from .config import config_bp
 
 bp = Blueprint.group(
     user_bp,
@@ -30,5 +32,7 @@ bp = Blueprint.group(
     delivery_bp,
     repo_record_bp,
     ai_bp,
+    score_bp,
+    config_bp,
     url_prefix="/v1",
 )

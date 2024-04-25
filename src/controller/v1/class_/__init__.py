@@ -504,3 +504,98 @@ async def remove_class_member(request, class_id: int, body: RemoveClassMemberReq
         result.success_count = len(member_id_list)
 
     return result.json_response()
+
+
+@class_bp.route("/<class_id:int>/archive", methods=["POST"])
+@openapi.summary("归档班级")
+@openapi.tag("班级接口")
+@openapi.description(
+    """
+归档班级，需要管理员或教师权限。
+- 仅当班级状态为`ClassStatus.teaching`时，才能归档班级。
+- 一旦班级状态变更为`ClassStatus.archived`，将无法对班级进行修改。
+- 归档班级后，小组内的任务只可以查看，不可以再提交。
+"""
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@need_login()
+@need_role([UserType.admin, UserType.teacher])
+async def archive_class(request, class_id: int):
+    db = request.app.ctx.db
+
+    clazz = service.class_.has_class_access(request, class_id)
+    if not clazz:
+        return ErrorResponse.new_error(
+            404,
+            "Class Not Found",
+        )
+    if clazz.status != ClassStatus.teaching:
+        return ErrorResponse.new_error(
+            400,
+            "Only can archive class when class status is teaching",
+        )
+
+    with db() as session:
+        session.execute(
+            Class.__table__.update()
+            .where(Class.id == class_id)
+            .values(status=ClassStatus.finished)
+        )
+        session.commit()
+
+    return BaseDataResponse.new_data({})
+
+
+@class_bp.route("/<class_id:int>/archive", methods=["DELETE"])
+@openapi.summary("取消归档班级")
+@openapi.tag("班级接口")
+@openapi.description(
+    """
+取消归档班级，需要管理员或教师权限。
+- 仅当班级状态为`ClassStatus.archived`时，才能取消归档班级。
+- 取消归档班级操作的目标班级状态为`ClassStatus.teaching`。
+"""
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@need_login()
+@need_role([UserType.admin, UserType.teacher])
+async def unarchive_class(request, class_id: int):
+    db = request.app.ctx.db
+
+    clazz = service.class_.has_class_access(request, class_id)
+    if not clazz:
+        return ErrorResponse.new_error(
+            404,
+            "Class Not Found",
+        )
+    if clazz.status != ClassStatus.finished:
+        return ErrorResponse.new_error(
+            400,
+            "Only can unarchive class when class status is archived",
+        )
+
+    with db() as session:
+        session.execute(
+            Class.__table__.update()
+            .where(Class.id == class_id)
+            .values(status=ClassStatus.teaching)
+        )
+        session.commit()
+
+    return BaseDataResponse.new_data({})
