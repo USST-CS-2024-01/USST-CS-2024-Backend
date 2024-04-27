@@ -5,6 +5,7 @@ INJECTION_MODULES = [
     "redis_attachment",
     "goflet_attachment",
     "kafka_attachment",
+    "logger_attachment",
 ]
 
 

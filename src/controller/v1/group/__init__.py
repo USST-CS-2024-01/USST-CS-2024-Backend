@@ -1,3 +1,4 @@
+import time
 from operator import and_
 
 from sanic import Blueprint
@@ -29,9 +30,7 @@ group_bp = Blueprint("group")
 @group_bp.route("/class/<class_id:int>/group/start", methods=["POST"])
 @openapi.summary("开始分组")
 @openapi.tag("分组接口")
-@openapi.description(
-    "将班级状态推进为分组中状态，此时学生可以进行分组操作，老师可以进行分组设置和审核，班级状态的变更无法回退，需要谨慎操作。"
-)
+@openapi.description("将班级状态推进为分组中状态，此时学生可以进行分组操作，老师可以进行分组设置和审核，班级状态的变更无法回退，需要谨慎操作。")
 @openapi.response(
     200,
     description="成功",
@@ -76,6 +75,16 @@ async def start_group(request, class_id: int):
 
         clazz.status = ClassStatus.grouping
         session.commit()
+
+        request.app.ctx.log.add_log(
+            log_type="group:start",
+            content="Class {} started grouping at {}".format(
+                clazz.name,
+                time.strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+            user=request.ctx.user,
+            request=request,
+        )
 
     return BaseDataResponse(
         data=None,
@@ -235,6 +244,17 @@ async def create_group(request, class_id: int, body: CreateGroupRequest):
 
         session.commit()
 
+    request.app.ctx.log.add_log(
+        log_type="group:create",
+        content="Class {} created group {} at {}".format(
+            clazz.name,
+            group.name,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+        ),
+        user=request.ctx.user,
+        request=request,
+    )
+
     return BaseDataResponse(
         data=None,
     ).json_response()
@@ -378,6 +398,17 @@ async def join_group(request, class_id: int, group_id: int, class_member_id: int
         session.execute(stmt)
         session.commit()
 
+    request.app.ctx.log.add_log(
+        log_type="group:join",
+        content="Class Member {} joined Group {} at {}".format(
+            class_member_id,
+            group_id,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+        ),
+        user=request.ctx.user,
+        request=request,
+    )
+
     return BaseDataResponse(
         data=None,
     ).json_response()
@@ -510,6 +541,17 @@ async def leave_group(request, class_id: int, group_id: int, class_member_id: in
         session.execute(stmt)
 
         session.commit()
+
+    request.app.ctx.log.add_log(
+        log_type="group:leave",
+        content="Class Member {} left Group {} at {}".format(
+            class_member_id,
+            group_id,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+        ),
+        user=request.ctx.user,
+        request=request,
+    )
 
     return BaseDataResponse(
         data=None,
@@ -650,6 +692,17 @@ async def approve_group_member(
         session.execute(stmt)
 
         session.commit()
+
+    request.app.ctx.log.add_log(
+        log_type="group:approve",
+        content="Class Member {} approved to join Group {} at {}".format(
+            class_member_id,
+            group_id,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+        ),
+        user=request.ctx.user,
+        request=request,
+    )
 
     return BaseDataResponse(
         data=None,
@@ -847,6 +900,16 @@ async def update_group_member(
 
         session.commit()
 
+    request.app.ctx.log.add_log(
+        log_type="group:update_member",
+        content="Class Member {} updated at {}".format(
+            class_member_id,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+        ),
+        user=request.ctx.user,
+        request=request,
+    )
+
     return BaseDataResponse(
         data=None,
     ).json_response()
@@ -941,6 +1004,16 @@ async def update_group(request, class_id: int, group_id: int, body: UpdateGroupR
         group.name = body.group_name
         session.commit()
 
+    request.app.ctx.log.add_log(
+        log_type="group:update",
+        content="Group {} updated at {}".format(
+            group_id,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+        ),
+        user=request.ctx.user,
+        request=request,
+    )
+
     return BaseDataResponse(
         data=None,
     ).json_response()
@@ -1022,6 +1095,16 @@ async def delete_group(request, class_id: int, group_id: int):
 
         session.commit()
 
+    request.app.ctx.log.add_log(
+        log_type="group:delete",
+        content="Group {} deleted at {}".format(
+            group_id,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+        ),
+        user=request.ctx.user,
+        request=request,
+    )
+
     return BaseDataResponse(
         data=None,
     ).json_response()
@@ -1074,6 +1157,16 @@ async def approve_group(request, class_id: int, group_id: int):
         group.status = GroupStatus.normal
         session.commit()
 
+    request.app.ctx.log.add_log(
+        log_type="group:approve",
+        content="Group {} approved at {}".format(
+            group_id,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+        ),
+        user=request.ctx.user,
+        request=request,
+    )
+
     return BaseDataResponse(
         data=None,
     ).json_response()
@@ -1124,6 +1217,16 @@ async def revoke_group_approval(request, class_id: int, group_id: int):
 
         group.status = GroupStatus.pending
         session.commit()
+
+    request.app.ctx.log.add_log(
+        log_type="group:revoke",
+        content="Group {} revoked at {}".format(
+            group_id,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+        ),
+        user=request.ctx.user,
+        request=request,
+    )
 
     return BaseDataResponse(
         data=None,

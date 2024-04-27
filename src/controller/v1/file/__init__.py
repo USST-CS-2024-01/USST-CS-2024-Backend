@@ -94,6 +94,13 @@ async def start_file_upload_session(request, body: CreateFileRequest):
     )
 
     response = UploadSessionResponse(session_id=session_id, upload_url=upload_url)
+
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="file:start_upload_session",
+        content=f"Start upload session {session_id}, owner_type: {body.owner_type}, owner_id: {body.owner_id}",
+    )
+
     return response.json_response()
 
 
@@ -118,6 +125,12 @@ async def complete_file_upload_session(request, session_id: str):
     except Exception as e:
         return ErrorResponse.new_error(400, str(e))
 
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="file:complete_upload_session",
+        content=f"Complete upload session {session_id}, file_id: {file.id}",
+    )
+
     return BaseDataResponse(data=FileSchema.model_validate(file)).json_response()
 
 
@@ -141,6 +154,13 @@ async def cancel_file_upload_session(request, session_id: str):
         await service.file.cancel_upload_session(request, session_id)
     except Exception as e:
         return ErrorResponse.new_error(400, str(e))
+
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="file:cancel_upload_session",
+        content=f"Cancel upload session {session_id}",
+    )
+
     return BaseDataResponse().json_response()
 
 
@@ -198,6 +218,12 @@ async def delete_file(request, file_id: int):
     except Exception as e:
         return ErrorResponse.new_error(400, str(e))
 
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="file:delete",
+        content=f"Delete file {file_id}",
+    )
+
     return BaseDataResponse().json_response()
 
 
@@ -240,6 +266,12 @@ async def update_file_info(request, file_id: int, body: UpdateFileRequest):
         file.name = new_file_name
         session.commit()
 
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="file:update",
+        content=f"Update file {file_id}, new name: {new_file_name}",
+    )
+
     return BaseDataResponse().json_response()
 
 
@@ -267,6 +299,12 @@ async def download_file(request, file_id: int):
 
     if not access["read"]:
         return ErrorResponse.new_error(403, "No access to the file")
+
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="file:download",
+        content=f"Download file {file_id}",
+    )
 
     return BaseDataResponse(
         data=goflet.create_download_url(file.file_key)
@@ -352,6 +390,12 @@ async def onlyoffice_view_file(request, file_id: int):
         ONLYOFFICE_TEMPLATE.replace("${endpoint}", onlyoffice_endpoint)
         .replace("${config}", json_config)
         .replace("${filename}", file_name)
+    )
+
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="file:onlyoffice_view",
+        content=f"View file {file_id}",
     )
 
     return html(html_data)
@@ -476,6 +520,13 @@ async def convert_to_no_comment_post(request, file_id: int, body: UpdateFileRequ
         new_file = await service.onlyoffice.convert_to_no_comment(
             request, file, new_file_name
         )
+
+        request.app.ctx.log.add_log(
+            request=request,
+            log_type="file:convert_to_no_comment",
+            content=f"Convert file {file_id} to no comment file {new_file.id}",
+        )
+
         return BaseDataResponse(
             data=FileSchema.model_validate(new_file)
         ).json_response()

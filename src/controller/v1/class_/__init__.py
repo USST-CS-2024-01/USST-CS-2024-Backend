@@ -136,6 +136,12 @@ async def create_class(request, body: ChangeClassInfoRequest):
             str(e),
         )
 
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="class:create_class",
+        content=f"Create class {new_class.name}({new_class.id})",
+    )
+
     return BaseDataResponse.new_data(
         ClassReturnItem(
             id=new_class.id,
@@ -255,6 +261,12 @@ async def update_class_info(request, class_id: int, body: ChangeClassInfoRequest
         session.commit()
         clazz = session.execute(select(Class).where(Class.id == class_id)).scalar_one()
 
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="class:update_class_info",
+        content=f"Update class {clazz.name}({clazz.id})",
+    )
+
     return BaseDataResponse.new_data(
         ClassReturnItem(
             id=clazz.id,
@@ -292,6 +304,12 @@ async def delete_class(request, class_id: int):
     with db() as session:
         session.execute(Class.__table__.delete().where(Class.id == class_id))
         session.commit()
+
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="class:delete_class",
+        content=f"Delete class {class_id}",
+    )
 
     return BaseDataResponse.new_data({})
 
@@ -419,6 +437,12 @@ async def add_class_member(request, class_id: int, body: AddClassMemberRequest):
 
         session.commit()
 
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="class:add_class_member",
+        content=f"Add member to class {class_id}",
+    )
+
     result.failed_list = [int(x) for x in result.failed_list]
 
     return result.json_response()
@@ -503,6 +527,12 @@ async def remove_class_member(request, class_id: int, body: RemoveClassMemberReq
 
         result.success_count = len(member_id_list)
 
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="class:remove_class_member",
+        content=f"Remove member from class {class_id}",
+    )
+
     return result.json_response()
 
 
@@ -551,6 +581,12 @@ async def archive_class(request, class_id: int):
         )
         session.commit()
 
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="class:archive_class",
+        content=f"Archive class {class_id}",
+    )
+
     return BaseDataResponse.new_data({})
 
 
@@ -597,5 +633,11 @@ async def unarchive_class(request, class_id: int):
             .values(status=ClassStatus.teaching)
         )
         session.commit()
+
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="class:unarchive_class",
+        content=f"Unarchive class {class_id}",
+    )
 
     return BaseDataResponse.new_data({})

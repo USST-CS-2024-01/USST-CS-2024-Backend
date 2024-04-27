@@ -192,6 +192,13 @@ async def archive_group_repo_record(
                 code=404,
                 message="Archive not found",
             )
+
+        request.app.ctx.log.add_log(
+            request=request,
+            log_type="repo_record:archive",
+            content=f"Download archive for repo record {repo_record_id}",
+        )
+
         return BaseDataResponse(
             data=goflet.create_download_url(file.file_key)
         ).json_response()
@@ -272,6 +279,12 @@ async def create_group_repo_record(
             ).encode(),
         )
         goflet.jwt_expiration = exp
+
+        request.app.ctx.log.add_log(
+            request=request,
+            log_type="repo_record:create",
+            content=f"Create repo record {repo_record.id}",
+        )
 
         return BaseDataResponse(
             data=RepoRecordSchema.model_validate(repo_record),
@@ -375,4 +388,11 @@ async def get_public_key(request, class_id: int, group_id: int):
                 message="Public key not found",
             )
         key = repo_record.value
+
+        request.app.ctx.log.add_log(
+            request=request,
+            log_type="repo_record:public_key",
+            content=f"Get public key",
+        )
+
         return BaseDataResponse(data=key).json_response()

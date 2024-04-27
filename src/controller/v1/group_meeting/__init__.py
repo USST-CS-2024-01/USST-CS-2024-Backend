@@ -204,6 +204,13 @@ async def delete_meeting(request, class_id: int, group_id: int, meeting_id: int)
 
         session.delete(meeting)
         session.commit()
+
+        request.app.ctx.log.add_log(
+            log_type="group_meeting:delete",
+            content=f"Delete group meeting {meeting_id}",
+            request=request,
+        )
+
         return BaseDataResponse().json_response()
 
 
@@ -313,6 +320,12 @@ async def update_meeting(
         session.add(meeting)
         session.commit()
 
+    request.app.ctx.log.add_log(
+        log_type="group_meeting:update",
+        content=f"Update group meeting {meeting_id}",
+        request=request,
+    )
+
     return BaseDataResponse().json_response()
 
 
@@ -397,6 +410,12 @@ async def create_meeting(
         session.add(meeting)
         session.commit()
 
+        request.app.ctx.log.add_log(
+            log_type="group_meeting:create",
+            content=f"Create group meeting {meeting.id}",
+            request=request,
+        )
+
         return BaseDataResponse(
             data=GroupMeetingSchema.model_validate(meeting)
         ).json_response()
@@ -464,5 +483,11 @@ async def attend_meeting(request, class_id: int, group_id: int, meeting_id: int)
             )
             session.execute(stmt)
             session.commit()
+
+        request.app.ctx.log.add_log(
+            log_type="group_meeting:attend",
+            content=f"Attend group meeting {meeting_id}",
+            request=request,
+        )
 
         return BaseDataResponse().json_response()

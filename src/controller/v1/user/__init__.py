@@ -144,6 +144,13 @@ async def update_user_info(request, body: MeUserUpdateRequest):
         sess.execute(stmt)
         sess.commit()
 
+    request.app.ctx.log.add_log(
+        request=request,
+        user=request.ctx.user,
+        log_type="user:update",
+        content=f"Update user {user.username}",
+    )
+
     return MeUserResponse(
         code=200,
         message="ok",
@@ -214,6 +221,13 @@ async def delete_user(request, user_id):
         sess.execute(stmt)
         sess.commit()
 
+    request.app.ctx.log.add_log(
+        request=request,
+        user=request.ctx.user,
+        log_type="user:delete",
+        content=f"Delete user {user.username}",
+    )
+
     return BaseResponse(code=200, message="ok").json_response()
 
 
@@ -268,6 +282,13 @@ async def update_user(request, user_id, body: UserUpdateRequest):
     with db() as sess:
         sess.execute(stmt)
         sess.commit()
+
+    request.app.ctx.log.add_log(
+        request=request,
+        user=request.ctx.user,
+        log_type="user:update",
+        content=f"Update user {user.username}",
+    )
 
     return MeUserResponse(
         code=200,
@@ -338,6 +359,13 @@ async def create_user(request, body: UserUpdateRequest):
         # 刷新对象，以获取数据库中的所有字段
         sess.refresh(new_user)
         new_user_pydantic = UserSchema.model_validate(new_user)
+
+        request.app.ctx.log.add_log(
+            request=request,
+            user=request.ctx.user,
+            log_type="user:create",
+            content=f"Create user {new_user.username}",
+        )
 
     return MeUserResponse(
         code=200,

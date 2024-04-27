@@ -125,6 +125,14 @@ async def create_announcement(request, body: CreateAnnouncementRequest):
 
         session.merge(announcement)
         session.commit()
+        session.refresh(announcement)
+
+        request.app.ctx.log.add_log(
+            request=request,
+            user=user,
+            log_type="announcement:create_announcement",
+            content=f"User {user.username} created announcement {announcement.id}",
+        )
 
     return BaseResponse().json_response()
 
@@ -328,6 +336,13 @@ async def update_announcement(
         session.merge(announcement)
         session.commit()
 
+        request.app.ctx.log.add_log(
+            request=request,
+            user=user,
+            log_type="announcement:update_announcement",
+            content=f"User {user.username} updated announcement {announcement.id}",
+        )
+
     return BaseResponse().json_response()
 
 
@@ -366,5 +381,12 @@ async def delete_announcement(request, announcement_id: int):
 
         session.delete(announcement)
         session.commit()
+
+        request.app.ctx.log.add_log(
+            request=request,
+            user=user,
+            log_type="announcement:delete_announcement",
+            content=f"User {user.username} deleted announcement {announcement.id}",
+        )
 
     return BaseResponse().json_response()

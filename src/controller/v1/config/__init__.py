@@ -108,6 +108,12 @@ async def update_config(request, config_id, body: UpdateConfigRequestModel):
         config.value = body.value
         session.commit()
 
+        request.app.ctx.log.add_log(
+            "config:update_config",
+            f"Update config {config.key}",
+            request,
+        )
+
         return BaseDataResponse(
             data=ConfigSchema.model_validate(config)
         ).json_response()

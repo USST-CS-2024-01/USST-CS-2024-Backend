@@ -157,8 +157,8 @@ async def login(request, body: LoginRequest):
     login_session_id = generate_login_session_id()
     await cache.set_pickle(login_session_id, user, expire=3600)
 
-    stmt = insert(Log).values(
-        log_type="login",
+    request.app.ctx.log.add_log(
+        log_type="auth:login",
         content="User {}(id:{}) logged in at {} from ip {}, sessionId: {}".format(
             user.username,
             user.id,
@@ -166,16 +166,9 @@ async def login(request, body: LoginRequest):
             request.ip,
             mask_string(login_session_id),
         ),
-        user_id=user.id,
-        user_name=user.name,
-        user_employee_id=user.employee_id,
-        user_type=user.user_type,
-        operation_time=time.strftime("%Y-%m-%d %H:%M:%S"),
-        operation_ip=request.ip,
+        user=user,
+        request=request,
     )
-    with db() as sess:
-        sess.execute(stmt)
-        sess.commit()
 
     resp = LoginResponse(
         code=200,
@@ -208,8 +201,9 @@ async def logout(request):
     user = request.ctx.user
     login_session_id = request.ctx.session_id
 
-    stmt = insert(Log).values(
-        log_type="logout",
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="auth:logout",
         content="User {}(id:{}) logged out at {} from ip {}, sessionId: {}".format(
             user.username,
             user.id,
@@ -217,16 +211,7 @@ async def logout(request):
             request.ip,
             mask_string(login_session_id),
         ),
-        user_id=user.id,
-        user_name=user.name,
-        user_employee_id=user.employee_id,
-        user_type=user.user_type,
-        operation_time=time.strftime("%Y-%m-%d %H:%M:%S"),
-        operation_ip=request.ip,
     )
-    with db() as sess:
-        sess.execute(stmt)
-        sess.commit()
 
     # Delete the login session
     await cache.delete(login_session_id)

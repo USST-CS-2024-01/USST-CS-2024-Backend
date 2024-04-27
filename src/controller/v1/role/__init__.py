@@ -123,6 +123,13 @@ async def create_class_role(request, class_id: int, body: CreateGroupRoleRequest
         sess.refresh(new_role)
         new_role_pydantic = GroupRoleSchema.model_validate(new_role)
 
+        request.app.ctx.log.add_log(
+            request=request,
+            user=request.ctx.user,
+            log_type="role:create",
+            content=f"Create role {new_role_pydantic.role_name} in class {class_id}",
+        )
+
     return BaseDataResponse(
         code=200,
         message="ok",
@@ -202,6 +209,13 @@ async def update_class_role(
         sess.refresh(role)
         role_pydantic = GroupRoleSchema.model_validate(role)
 
+        request.app.ctx.log.add_log(
+            request=request,
+            user=request.ctx.user,
+            log_type="role:update",
+            content=f"Update role {role_pydantic.role_name} in class {class_id}",
+        )
+
     return BaseDataResponse(
         code=200,
         message="ok",
@@ -259,5 +273,12 @@ async def delete_class_role(request, class_id: int, role_id: int):
 
         sess.delete(role)
         sess.commit()
+
+        request.app.ctx.log.add_log(
+            request=request,
+            user=request.ctx.user,
+            log_type="role:delete",
+            content=f"Delete role {role.role_name} in class {class_id}",
+        )
 
     return BaseResponse(code=200, message="ok").json_response()

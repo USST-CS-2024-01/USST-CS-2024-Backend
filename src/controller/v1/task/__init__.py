@@ -151,6 +151,12 @@ async def create_class_task(request, class_id: int, body: CreateTaskRequest):
     except ValueError as e:
         ErrorResponse.new_error(400, str(e))
 
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="task:create",
+        content=f"Create task {new.name} in class {class_id}",
+    )
+
     return BaseDataResponse(
         code=200,
         message="ok",
@@ -199,6 +205,12 @@ async def set_task_sequence(request, class_id: int, body: SetTaskSequenceRequest
         service.class_.change_class_task_sequence(request, class_id, body.sequences)
     except ValueError as e:
         return ErrorResponse.new_error(400, str(e))
+
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="task:sequence",
+        content=f"Set task sequence in class {class_id}",
+    )
 
     return BaseResponse(code=200, message="ok").json_response()
 
@@ -307,6 +319,12 @@ async def update_class_task(
             )
         except ValueError as e:
             return ErrorResponse.new_error(400, str(e))
+
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="task:update",
+        content=f"Update task {task.name} in class {class_id}",
+    )
 
     return BaseDataResponse(
         code=200,
@@ -419,6 +437,12 @@ async def delete_class_task(request, class_id: int, task_id: int):
 
         session.delete(task)
         session.commit()
+
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="task:delete",
+        content=f"Delete task {task.name} in class {class_id}",
+    )
 
     return BaseDataResponse(
         code=200,
@@ -553,6 +577,12 @@ async def start_teaching(request, class_id: int):
         )
 
         session.commit()
+
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="class:start_teaching",
+        content=f"Start teaching in class {class_id}",
+    )
 
     return BaseResponse(code=200, message="ok").json_response()
 

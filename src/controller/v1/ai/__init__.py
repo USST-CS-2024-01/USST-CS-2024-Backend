@@ -115,6 +115,11 @@ async def create_document_evaluation(request, body: CreateDocumentEvaluationRequ
             ).encode("utf-8"),
         )
 
+        request.app.ctx.log.add_log(
+            request=request,
+            log_type="ai:create_document_evaluation",
+            content=f"Create document evaluation task {record.id}",
+        )
     return BaseResponse().json_response()
 
 
@@ -230,6 +235,12 @@ async def resend_document_evaluation(request, file_id: int):
         )
         session.commit()
 
+        request.app.ctx.log.add_log(
+            request=request,
+            log_type="ai:resend_document_evaluation",
+            content=f"Resend document evaluation task {record.id}",
+        )
+
     return BaseResponse().json_response()
 
 
@@ -280,4 +291,9 @@ async def cancel_document_evaluation(request, file_id: int):
         session.delete(record)
         session.commit()
 
+        request.app.ctx.log.add_log(
+            request=request,
+            log_type="ai:cancel_document_evaluation",
+            content=f"Cancel document evaluation task {record.id}",
+        )
     return BaseResponse().json_response()

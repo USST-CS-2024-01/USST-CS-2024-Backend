@@ -293,6 +293,12 @@ async def create_group_task(
         session.add(task)
         session.commit()
 
+        request.app.ctx.log.add_log(
+            request=request,
+            log_type="group_task:create_group_task",
+            content=f"Create group task {task.id}",
+        )
+
         return BaseDataResponse(
             data=GroupTaskSchema.model_validate(task)
         ).json_response()
@@ -446,6 +452,12 @@ async def update_group_task(
 
         session.commit()
 
+        request.app.ctx.log.add_log(
+            request=request,
+            log_type="group_task:update_group_task",
+            content=f"Update group task {task_id}",
+        )
+
     return BaseDataResponse().json_response()
 
 
@@ -524,5 +536,11 @@ async def delete_group_task(request, class_id: int, group_id: int, task_id: int)
             )
 
         session.commit()
+
+    request.app.ctx.log.add_log(
+        request=request,
+        log_type="group_task:delete_group_task",
+        content=f"Delete group task {task_id}",
+    )
 
     return BaseDataResponse().json_response()

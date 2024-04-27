@@ -198,6 +198,20 @@ async def create_delivery(
         session.commit()
         session.refresh(delivery)
 
+        request.app.ctx.log.add_log(
+            log_type="delivery:create",
+            content="User {}(id:{}) created a delivery(id:{}) for task {} in group {} at {}.".format(
+                request.ctx.user.username,
+                request.ctx.user.id,
+                delivery.id,
+                task_id,
+                group_id,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+            user=request.ctx.user,
+            request=request,
+        )
+
         return BaseDataResponse(
             data=DeliverySchema.model_validate(delivery)
         ).json_response()
@@ -298,6 +312,20 @@ async def update_draft(
         session.add(draft)
         session.commit()
         session.refresh(draft)
+
+        request.app.ctx.log.add_log(
+            log_type="delivery:update",
+            content="User {}(id:{}) updated a delivery(id:{}) for task {} in group {} at {}.".format(
+                request.ctx.user.username,
+                request.ctx.user.id,
+                draft.id,
+                task_id,
+                group_id,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+            user=request.ctx.user,
+            request=request,
+        )
 
         return BaseDataResponse(
             data=DeliverySchema.model_validate(draft)
@@ -413,6 +441,20 @@ async def add_delivery_item(
         session.commit()
         session.refresh(delivery)
 
+        request.app.ctx.log.add_log(
+            log_type="delivery:add_item",
+            content="User {}(id:{}) added a delivery item(id:{}) for task {} in group {} at {}.".format(
+                request.ctx.user.username,
+                request.ctx.user.id,
+                delivery_item.id,
+                task_id,
+                group_id,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+            user=request.ctx.user,
+            request=request,
+        )
+
         return BaseDataResponse(
             data=DeliveryItemSchema.model_validate(delivery_item)
         ).json_response()
@@ -467,6 +509,20 @@ async def delete_delivery_item(
         session.delete(delivery_item)
         session.commit()
 
+        request.app.ctx.log.add_log(
+            log_type="delivery:delete_item",
+            content="User {}(id:{}) deleted a delivery item(id:{}) for task {} in group {} at {}.".format(
+                request.ctx.user.username,
+                request.ctx.user.id,
+                item_id,
+                task_id,
+                group_id,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+            user=request.ctx.user,
+            request=request,
+        )
+
         return BaseResponse().json_response()
 
 
@@ -517,6 +573,20 @@ async def submit_draft(request, class_id: int, group_id: int, task_id: int):
 
         session.add(draft)
         session.commit()
+
+        request.app.ctx.log.add_log(
+            log_type="delivery:submit",
+            content="User {}(id:{}) submitted a delivery(id:{}) for task {} in group {} at {}.".format(
+                request.ctx.user.username,
+                request.ctx.user.id,
+                draft.id,
+                task_id,
+                group_id,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+            user=request.ctx.user,
+            request=request,
+        )
 
         return BaseDataResponse().json_response()
 
@@ -640,6 +710,20 @@ async def accept_review(
         session.add(delivery)
         session.commit()
 
+        request.app.ctx.log.add_log(
+            log_type="delivery:approve",
+            content="User {}(id:{}) approved a delivery(id:{}) for task {} in group {} at {}.".format(
+                request.ctx.user.username,
+                request.ctx.user.id,
+                delivery.id,
+                task_id,
+                group_id,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+            user=request.ctx.user,
+            request=request,
+        )
+
         return BaseDataResponse().json_response()
 
 
@@ -720,6 +804,20 @@ async def reject_review(
         session.add(delivery)
         session.commit()
 
+        request.app.ctx.log.add_log(
+            log_type="delivery:reject",
+            content="User {}(id:{}) rejected a delivery(id:{}) for task {} in group {} at {}.".format(
+                request.ctx.user.username,
+                request.ctx.user.id,
+                delivery.id,
+                task_id,
+                group_id,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+            user=request.ctx.user,
+            request=request,
+        )
+
         return BaseDataResponse().json_response()
 
 
@@ -790,6 +888,20 @@ async def score_review(
         )
         session.merge(teacher_score)
         session.commit()
+
+        request.app.ctx.log.add_log(
+            log_type="delivery:score",
+            content="User {}(id:{}) scored a delivery(id:{}) for task {} in group {} at {}.".format(
+                request.ctx.user.username,
+                request.ctx.user.id,
+                delivery.id,
+                task_id,
+                group_id,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+            user=request.ctx.user,
+            request=request,
+        )
 
         return BaseDataResponse().json_response()
 
@@ -902,5 +1014,18 @@ async def next_task(request, class_id: int, group_id: int):
             return ErrorResponse.new_error(code=404, message="Already the last task.")
         group.current_task_id = next_task_id
         session.commit()
+
+        request.app.ctx.log.add_log(
+            log_type="delivery:next_task",
+            content="User {}(id:{}) allowed group {} to submit next task {} at {}.".format(
+                request.ctx.user.username,
+                request.ctx.user.id,
+                group_id,
+                next_task_id,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+            user=request.ctx.user,
+            request=request,
+        )
 
         return BaseResponse().json_response()

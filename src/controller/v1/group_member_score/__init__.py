@@ -198,4 +198,11 @@ async def create_group_member_score(
 
         session.commit()
 
+        request.app.ctx.log.add_log(
+            request=request,
+            user=user,
+            log_type="group_member_score:create_group_member_score",
+            comment=f"Create group member score: {score.id}",
+        )
+
         return BaseDataResponse().json_response()

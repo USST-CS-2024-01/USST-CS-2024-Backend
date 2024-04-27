@@ -43,6 +43,7 @@ async def before_server_start(app: Sanic) -> None:
     engine = create_engine(mysql_url)
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(bind=engine)
+    app.ctx.db_engine = engine
     app.ctx.db = scoped_session(session_factory)
 
     init.database_init(app.ctx.db)
