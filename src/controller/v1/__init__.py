@@ -16,6 +16,7 @@ from .task import task_bp
 from .user import user_bp
 from .score import score_bp
 from .config import config_bp
+from .log import log_bp
 
 bp = Blueprint.group(
     user_bp,
@@ -34,5 +35,6 @@ bp = Blueprint.group(
     ai_bp,
     score_bp,
     config_bp,
+    log_bp,
     url_prefix="/v1",
 )
