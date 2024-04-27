@@ -17,7 +17,6 @@ class CreateAnnouncementRequest(BaseModel):
     receiver_role: Optional[str] = Field(
         None, description="接收者角色", pattern=r"^(teacher|student|admin)$"
     )
-    is_important: Optional[bool] = Field(False, description="是否为重要公告，默认为否")
     attachments: Optional[List[int]] = Field(None, description="附件ID列表")
 
 

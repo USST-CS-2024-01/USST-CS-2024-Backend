@@ -25,6 +25,7 @@ from model.response_model import (
     BaseDataResponse,
 )
 from model.schema import GroupTaskSchema
+from util.parameter import generate_parameters_from_pydantic
 from util.string import timestamp_to_datetime
 
 group_task_bp = Blueprint("group_task")
@@ -35,6 +36,22 @@ group_task_bp = Blueprint("group_task")
 )
 @openapi.summary("获取小组任务列表")
 @openapi.tag("小组任务接口")
+@openapi.description(
+    """
+获取小组任务列表，支持分页、排序、搜索等功能。
+"""
+)
+@openapi.definition(parameter=generate_parameters_from_pydantic(ListGroupTaskRequest))
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[GroupTaskSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(query=ListGroupTaskRequest)
 async def get_group_task_list(
@@ -94,6 +111,21 @@ async def get_group_task_list(
 )
 @openapi.summary("获取小组任务详情")
 @openapi.tag("小组任务接口")
+@openapi.description(
+    """
+获取小组任务详情。
+"""
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[GroupTaskSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def get_group_task_detail(request, class_id: int, group_id: int, task_id: int):
     """
@@ -144,6 +176,28 @@ async def get_group_task_detail(request, class_id: int, group_id: int, task_id: 
 )
 @openapi.summary("创建小组任务")
 @openapi.tag("小组任务接口")
+@openapi.description(
+    """
+创建小组任务。
+"""
+)
+@openapi.body(
+    {
+        "application/json": AddGroupTaskRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[GroupTaskSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=AddGroupTaskRequest)
 async def create_group_task(
@@ -250,6 +304,28 @@ async def create_group_task(
 )
 @openapi.summary("更新小组任务")
 @openapi.tag("小组任务接口")
+@openapi.description(
+    """
+更新小组任务。
+"""
+)
+@openapi.body(
+    {
+        "application/json": UpdateGroupTaskRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=UpdateGroupTaskRequest)
 async def update_group_task(
@@ -379,6 +455,21 @@ async def update_group_task(
 )
 @openapi.summary("删除小组任务")
 @openapi.tag("小组任务接口")
+@openapi.description(
+    """
+删除小组任务。
+"""
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def delete_group_task(request, class_id: int, group_id: int, task_id: int):
     """

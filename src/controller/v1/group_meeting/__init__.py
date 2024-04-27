@@ -25,6 +25,7 @@ from model.response_model import (
     BaseDataResponse,
 )
 from model.schema import GroupMeetingSchema
+from util.parameter import generate_parameters_from_pydantic
 from util.string import timestamp_to_datetime
 
 group_meeting_bp = Blueprint("group_meeting")
@@ -35,6 +36,19 @@ group_meeting_bp = Blueprint("group_meeting")
 )
 @openapi.summary("获取分组会议列表")
 @openapi.tag("会议接口")
+@openapi.definition(
+    parameter=generate_parameters_from_pydantic(ListGroupMeetingRequest)
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[GroupMeetingSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(query=ListGroupMeetingRequest)
 async def get_meeting_list(
@@ -84,6 +98,16 @@ async def get_meeting_list(
 )
 @openapi.summary("获取分组会议详情")
 @openapi.tag("会议接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[GroupMeetingSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def get_meeting_detail(request, class_id: int, group_id: int, meeting_id: int):
     db = request.app.ctx.db
@@ -123,6 +147,16 @@ async def get_meeting_detail(request, class_id: int, group_id: int, meeting_id: 
 )
 @openapi.summary("删除分组会议")
 @openapi.tag("会议接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def delete_meeting(request, class_id: int, group_id: int, meeting_id: int):
     db = request.app.ctx.db
@@ -179,6 +213,23 @@ async def delete_meeting(request, class_id: int, group_id: int, meeting_id: int)
 )
 @openapi.summary("更新分组会议")
 @openapi.tag("会议接口")
+@openapi.body(
+    {
+        "application/json": UpdateGroupMeetingRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=UpdateGroupMeetingRequest)
 async def update_meeting(
@@ -271,6 +322,23 @@ async def update_meeting(
 )
 @openapi.summary("创建分组会议")
 @openapi.tag("会议接口")
+@openapi.body(
+    {
+        "application/json": CreateGroupMeetingRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[GroupMeetingSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=CreateGroupMeetingRequest)
 async def create_meeting(
@@ -340,6 +408,16 @@ async def create_meeting(
 )
 @openapi.summary("参加分组会议")
 @openapi.tag("会议接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def attend_meeting(request, class_id: int, group_id: int, meeting_id: int):
     db = request.app.ctx.db

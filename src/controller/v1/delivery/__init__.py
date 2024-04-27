@@ -45,6 +45,17 @@ delivery_bp = Blueprint("delivery")
 )
 @openapi.summary("获取任务提交列表")
 @openapi.tag("任务提交接口")
+@openapi.description("""获取任务提交列表，按照提交时间倒序排列。""")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[DeliverySchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def list_delivery(request, class_id: int, group_id: int, task_id: int):
     db = request.app.ctx.db
@@ -91,6 +102,16 @@ async def list_delivery(request, class_id: int, group_id: int, task_id: int):
 - task_id 是当前小组的任务 ID
 """
 )
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def check_delivery(request, class_id: int, group_id: int, task_id: int):
     group, class_member, is_manager = service.group.have_group_access(
@@ -117,6 +138,24 @@ async def check_delivery(request, class_id: int, group_id: int, task_id: int):
 )
 @openapi.summary("创建任务提交草稿")
 @openapi.tag("任务提交接口")
+@openapi.description("""创建任务提交草稿，需要提供任务提交的评论。""")
+@openapi.body(
+    {
+        "application/json": CreateDeliveryRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[DeliverySchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=CreateDeliveryRequest)
 async def create_delivery(
@@ -170,6 +209,17 @@ async def create_delivery(
 )
 @openapi.summary("获取任务提交草稿")
 @openapi.tag("任务提交接口")
+@openapi.description("""获取任务提交草稿，返回任务提交的评论。""")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[DeliverySchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def get_draft(request, class_id: int, group_id: int, task_id: int):
     db = request.app.ctx.db
@@ -200,6 +250,24 @@ async def get_draft(request, class_id: int, group_id: int, task_id: int):
 )
 @openapi.summary("更新任务提交草稿")
 @openapi.tag("任务提交接口")
+@openapi.description("""更新任务提交草稿，需要提供任务提交的评论。""")
+@openapi.body(
+    {
+        "application/json": CreateDeliveryRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[DeliverySchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=CreateDeliveryRequest)
 async def update_draft(
@@ -242,6 +310,24 @@ async def update_draft(
 )
 @openapi.summary("添加任务提交附件")
 @openapi.tag("任务提交接口")
+@openapi.description("""添加任务提交附件，需要提供附件的类型和 ID。""")
+@openapi.body(
+    {
+        "application/json": AddDeliveryItemRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[DeliveryItemSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=AddDeliveryItemRequest)
 async def add_delivery_item(
@@ -338,6 +424,17 @@ async def add_delivery_item(
 )
 @openapi.summary("删除任务提交附件")
 @openapi.tag("任务提交接口")
+@openapi.description("""删除任务提交附件，需要提供附件的 ID。""")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def delete_delivery_item(
     request, class_id: int, group_id: int, task_id: int, item_id: int
@@ -379,6 +476,17 @@ async def delete_delivery_item(
 )
 @openapi.summary("提交任务提交草稿")
 @openapi.tag("任务提交接口")
+@openapi.description("""提交任务提交草稿，需要提供任务提交的评论。""")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def submit_draft(request, class_id: int, group_id: int, task_id: int):
     db = request.app.ctx.db
@@ -419,6 +527,17 @@ async def submit_draft(request, class_id: int, group_id: int, task_id: int):
 )
 @openapi.summary("获取任务提交审核")
 @openapi.tag("任务提交接口")
+@openapi.description("""获取任务提交审核，返回任务提交的评论。""")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[DeliverySchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def get_review(request, class_id: int, group_id: int, task_id: int):
     db = request.app.ctx.db
@@ -448,6 +567,24 @@ async def get_review(request, class_id: int, group_id: int, task_id: int):
 )
 @openapi.summary("审核任务提交通过")
 @openapi.tag("任务提交接口")
+@openapi.description("""审核任务提交通过，需要提供任务提交的分数。""")
+@openapi.body(
+    {
+        "application/json": AcceptDeliveryRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=AcceptDeliveryRequest)
 async def accept_review(
@@ -512,6 +649,24 @@ async def accept_review(
 )
 @openapi.summary("审核任务提交拒绝")
 @openapi.tag("任务提交接口")
+@openapi.description("""审核任务提交拒绝，需要提供任务提交的评论。""")
+@openapi.body(
+    {
+        "application/json": RejectDeliveryRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=RejectDeliveryRequest)
 async def reject_review(
@@ -574,6 +729,24 @@ async def reject_review(
 )
 @openapi.summary("评分任务提交")
 @openapi.tag("任务提交接口")
+@openapi.description("""评分任务提交，需要提供任务提交的分数和评分详情。""")
+@openapi.body(
+    {
+        "application/json": ScoreDetailRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=ScoreDetailRequest)
@@ -627,6 +800,17 @@ async def score_review(
 )
 @openapi.summary("获取任务提交评分")
 @openapi.tag("任务提交接口")
+@openapi.description("""获取任务提交评分，返回任务提交的分数和评分详情。""")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[TeacherScoreSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 async def get_score_review(request, class_id: int, group_id: int, task_id: int):
@@ -668,6 +852,17 @@ async def get_score_review(request, class_id: int, group_id: int, task_id: int):
 )
 @openapi.summary("允许小组提交下一个任务")
 @openapi.tag("任务提交接口")
+@openapi.description("""允许小组提交下一个任务。""")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 async def next_task(request, class_id: int, group_id: int):

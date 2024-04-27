@@ -28,6 +28,16 @@ group_member_score_bp = Blueprint("group_member_score")
 )
 @openapi.summary("获取组内成员互评分数")
 @openapi.tag("组内互评接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": TaskGroupMemberScoreSchema.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def get_group_member_score(request, class_id: int, group_id: int, task_id: int):
     """
@@ -80,6 +90,23 @@ async def get_group_member_score(request, class_id: int, group_id: int, task_id:
 )
 @openapi.summary("提交组内成员互评分数")
 @openapi.tag("组内互评接口")
+@openapi.body(
+    {
+        "application/json": CreateGroupMemberScoreRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=CreateGroupMemberScoreRequest)
 async def create_group_member_score(

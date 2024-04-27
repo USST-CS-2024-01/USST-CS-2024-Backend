@@ -21,6 +21,7 @@ from middleware.validator import validate
 from model import FileOwnerType, UserType, Group, File, ClassMember
 from model.response_model import ErrorResponse, BaseDataResponse, BaseListResponse
 from model.schema import FileSchema
+from util.parameter import generate_parameters_from_pydantic
 
 file_bp = Blueprint("file")
 ONLYOFFICE_TEMPLATE = open("template/onlyoffice.html", "r").read()
@@ -30,6 +31,23 @@ ONLYOFFICE_TEMPLATE = open("template/onlyoffice.html", "r").read()
 @openapi.summary("开始文件上传会话")
 @openapi.tag("文件接口")
 @openapi.description("开始文件上传会话，返回上传会话ID和上传URL")
+@openapi.body(
+    {
+        "application/json": CreateFileRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": UploadSessionResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=CreateFileRequest)
 async def start_file_upload_session(request, body: CreateFileRequest):
@@ -83,6 +101,16 @@ async def start_file_upload_session(request, body: CreateFileRequest):
 @openapi.summary("完成文件上传会话")
 @openapi.tag("文件接口")
 @openapi.description("完成文件上传会话，返回文件信息")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[FileSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def complete_file_upload_session(request, session_id: str):
     try:
@@ -97,6 +125,16 @@ async def complete_file_upload_session(request, session_id: str):
 @openapi.summary("取消文件上传会话")
 @openapi.tag("文件接口")
 @openapi.description("取消文件上传会话")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def cancel_file_upload_session(request, session_id: str):
     try:
@@ -109,6 +147,16 @@ async def cancel_file_upload_session(request, session_id: str):
 @file_bp.route("/file/<file_id:int>", methods=["GET"])
 @openapi.summary("获取文件信息")
 @openapi.tag("文件接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[FileSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def get_file_info(request, file_id: int):
     try:
@@ -125,6 +173,16 @@ async def get_file_info(request, file_id: int):
 @file_bp.route("/file/<file_id:int>", methods=["DELETE"])
 @openapi.summary("删除文件")
 @openapi.tag("文件接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def delete_file(request, file_id: int):
     try:
@@ -146,6 +204,23 @@ async def delete_file(request, file_id: int):
 @file_bp.route("/file/<file_id:int>", methods=["PUT"])
 @openapi.summary("修改文件信息")
 @openapi.tag("文件接口")
+@openapi.body(
+    {
+        "application/json": UpdateFileRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=UpdateFileRequest)
 async def update_file_info(request, file_id: int, body: UpdateFileRequest):
@@ -171,6 +246,16 @@ async def update_file_info(request, file_id: int, body: UpdateFileRequest):
 @file_bp.route("/file/<file_id:int>/download", methods=["GET"])
 @openapi.summary("下载文件")
 @openapi.tag("文件接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def download_file(request, file_id: int):
     goflet = request.app.ctx.goflet
@@ -195,6 +280,15 @@ async def download_file(request, file_id: int):
     """
     该接口仅用于OnlyOffice客户端获取文件，用户不应直接访问该接口
 """
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
 )
 async def onlyoffice_download_file(request, file_id: int):
     goflet = request.app.ctx.goflet
@@ -221,6 +315,20 @@ async def onlyoffice_download_file(request, file_id: int):
 @file_bp.route("/file/<file_id:int>/onlyoffice/view", methods=["GET"])
 @openapi.summary("渲染OnlyOffice文件")
 @openapi.tag("文件接口")
+@openapi.description(
+    """
+    该接口用于渲染OnlyOffice文件，用户不应直接访问该接口
+"""
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login(where="query")
 async def onlyoffice_view_file(request, file_id: int):
     try:
@@ -252,6 +360,15 @@ async def onlyoffice_view_file(request, file_id: int):
 @file_bp.route("/file/<file_id:int>/onlyoffice/callback", methods=["POST"])
 @openapi.summary("OnlyOffice回调")
 @openapi.tag("文件接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 async def onlyoffice_callback(request, file_id: int):
     try:
         await service.onlyoffice.check_onlyoffice_access(request, file_id)
@@ -273,6 +390,20 @@ async def onlyoffice_callback(request, file_id: int):
 )
 @openapi.summary("Onlyoffice获取转换为无批注文档任务")
 @openapi.tag("文件接口")
+@openapi.description(
+    """
+    该接口用于获取转换为无批注文档任务，用户不应直接访问该接口
+"""
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 async def convert_to_no_comment(request, file_id: int):
     try:
         await service.onlyoffice.check_onlyoffice_access(request, file_id)
@@ -307,6 +438,23 @@ async def convert_to_no_comment(request, file_id: int):
 )
 @openapi.summary("转换为无批注文档")
 @openapi.tag("文件接口")
+@openapi.body(
+    {
+        "application/json": UpdateFileRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=UpdateFileRequest)
 async def convert_to_no_comment_post(request, file_id: int, body: UpdateFileRequest):
@@ -339,6 +487,17 @@ async def convert_to_no_comment_post(request, file_id: int, body: UpdateFileRequ
 @file_bp.route("/file/list", methods=["GET"])
 @openapi.summary("获取文件列表")
 @openapi.tag("文件接口")
+@openapi.definition(parameter=generate_parameters_from_pydantic(GetFileListRequest))
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[FileSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(query=GetFileListRequest)
 async def get_file_list(request, query: GetFileListRequest):

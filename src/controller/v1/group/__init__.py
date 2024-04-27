@@ -41,6 +41,7 @@ group_bp = Blueprint("group")
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 async def start_group(request, class_id: int):
@@ -93,6 +94,7 @@ async def start_group(request, class_id: int):
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 async def get_group_list(request, class_id: int):
     db = request.app.ctx.db
@@ -143,6 +145,7 @@ async def get_group_list(request, class_id: int):
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 @validate(json=CreateGroupRequest)
 async def create_group(request, class_id: int, body: CreateGroupRequest):
@@ -259,6 +262,7 @@ async def create_group(request, class_id: int, body: CreateGroupRequest):
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 async def join_group(request, class_id: int, group_id: int, class_member_id: int):
     db = request.app.ctx.db
@@ -398,6 +402,7 @@ async def join_group(request, class_id: int, group_id: int, class_member_id: int
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 async def leave_group(request, class_id: int, group_id: int, class_member_id: int):
     db = request.app.ctx.db
@@ -533,6 +538,7 @@ async def leave_group(request, class_id: int, group_id: int, class_member_id: in
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 async def approve_group_member(
     request, class_id: int, group_id: int, class_member_id: int
@@ -665,6 +671,7 @@ async def approve_group_member(
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 async def get_group_member(request, class_id: int, group_id: int, class_member_id: int):
     db = request.app.ctx.db
@@ -724,6 +731,7 @@ async def get_group_member(request, class_id: int, group_id: int, class_member_i
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 @validate(json=UpdateGroupMemberRequest)
 async def update_group_member(
@@ -859,6 +867,7 @@ async def update_group_member(
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 async def get_group(request, class_id: int, group_id: int):
     db = request.app.ctx.db
@@ -908,6 +917,7 @@ async def get_group(request, class_id: int, group_id: int):
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 @validate(json=UpdateGroupRequest)
 async def update_group(request, class_id: int, group_id: int, body: UpdateGroupRequest):
@@ -958,6 +968,7 @@ async def update_group(request, class_id: int, group_id: int, body: UpdateGroupR
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 async def delete_group(request, class_id: int, group_id: int):
     db = request.app.ctx.db
@@ -1039,6 +1050,7 @@ async def delete_group(request, class_id: int, group_id: int):
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 async def approve_group(request, class_id: int, group_id: int):
@@ -1089,6 +1101,7 @@ async def approve_group(request, class_id: int, group_id: int):
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 async def revoke_group_approval(request, class_id: int, group_id: int):

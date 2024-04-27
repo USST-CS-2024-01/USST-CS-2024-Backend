@@ -10,8 +10,6 @@ from sanic import Blueprint
 from sanic_ext import openapi
 from sqlalchemy import and_, func, select, or_
 
-from controller.v1.class_.request_model import ListClassRequest
-from controller.v1.class_.response_model import ClassReturnItem
 from controller.v1.role.request_model import CreateGroupRoleRequest
 from middleware.auth import need_login, need_role
 from middleware.validator import validate
@@ -41,6 +39,7 @@ role_bp = Blueprint("role")
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 async def get_role_list(request, class_id: int):
     db = request.app.ctx.db
@@ -89,6 +88,7 @@ async def get_role_list(request, class_id: int):
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=CreateGroupRoleRequest)
@@ -156,6 +156,7 @@ async def create_class_role(request, class_id: int, body: CreateGroupRoleRequest
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=CreateGroupRoleRequest)
@@ -227,6 +228,7 @@ async def update_class_role(
         )
     },
 )
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 async def delete_class_role(request, class_id: int, role_id: int):

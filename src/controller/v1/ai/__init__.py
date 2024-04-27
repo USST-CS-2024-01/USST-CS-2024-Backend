@@ -34,6 +34,27 @@ ai_bp = Blueprint("ai")
 @ai_bp.route("/ai/document_evaluation/create", methods=["POST"])
 @openapi.summary("创建文档评估")
 @openapi.tag("AI接口")
+@openapi.description(
+    """创建文档评估任务，需要提供文件ID，仅类型为delivery的文件可以进行评估。
+    评估任务创建成功后，会将任务信息发送到AI评估队列中，等待AI评估服务处理。"""
+)
+@openapi.body(
+    {
+        "application/json": CreateDocumentEvaluationRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(CreateDocumentEvaluationRequest)
@@ -100,6 +121,17 @@ async def create_document_evaluation(request, body: CreateDocumentEvaluationRequ
 @ai_bp.route("/file/<file_id:int>/document_evaluation", methods=["GET"])
 @openapi.summary("获取文档评估")
 @openapi.tag("AI接口")
+@openapi.description("""获取文档评估任务信息，返回最新的一条评估记录。""")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[AIDocScoreRecordSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def get_document_evaluation(request, file_id: int):
     """
@@ -140,6 +172,17 @@ async def get_document_evaluation(request, file_id: int):
 @ai_bp.route("/file/<file_id:int>/document_evaluation", methods=["PUT"])
 @openapi.summary("重新发送文档评估请求")
 @openapi.tag("AI接口")
+@openapi.description("""重新发送文档评估请求，仅对状态为pending或failed的任务有效。""")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 async def resend_document_evaluation(request, file_id: int):
@@ -193,6 +236,17 @@ async def resend_document_evaluation(request, file_id: int):
 @ai_bp.route("/file/<file_id:int>/document_evaluation", methods=["DELETE"])
 @openapi.summary("取消文档评估")
 @openapi.tag("AI接口")
+@openapi.description("""取消文档评估任务，仅对状态为pending或failed的任务有效。""")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 async def cancel_document_evaluation(request, file_id: int):

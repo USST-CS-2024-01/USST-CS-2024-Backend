@@ -20,6 +20,16 @@ config_bp = Blueprint("config", url_prefix="/config")
 @config_bp.route("/list", methods=["GET"])
 @openapi.summary("获取配置列表")
 @openapi.tag("配置接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[ConfigSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin])
 async def get_config_list(request):
@@ -40,6 +50,15 @@ async def get_config_list(request):
 @config_bp.route("/site_config", methods=["GET"])
 @openapi.summary("获取站点配置")
 @openapi.tag("配置接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 async def get_site_config(request):
     db = request.app.ctx.db
     config_list = ["course:title"]
@@ -56,6 +75,23 @@ async def get_site_config(request):
 @config_bp.route("/<config_id:str>", methods=["PUT"])
 @openapi.summary("修改配置")
 @openapi.tag("配置接口")
+@openapi.body(
+    {
+        "application/json": UpdateConfigRequestModel.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[ConfigSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin])
 @validate(json=UpdateConfigRequestModel)

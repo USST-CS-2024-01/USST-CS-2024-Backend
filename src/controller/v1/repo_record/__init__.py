@@ -20,6 +20,7 @@ from model.response_model import (
     BaseDataResponse,
 )
 from model.schema import RepoRecordSchema
+from util.parameter import generate_parameters_from_pydantic
 
 repo_record_bp = Blueprint("repo_record")
 
@@ -33,6 +34,17 @@ def generate_archive_file_key(task_id: int):
 )
 @openapi.summary("获取小组的仓库记录")
 @openapi.tag("仓库记录")
+@openapi.definition(parameter=generate_parameters_from_pydantic(ListRepoRequest))
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[RepoRecordSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(query=ListRepoRequest)
 async def list_group_repo_record(
@@ -80,6 +92,16 @@ async def list_group_repo_record(
 )
 @openapi.summary("获取小组的仓库记录详情")
 @openapi.tag("仓库记录")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[RepoRecordSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def get_group_repo_record(
     request, class_id: int, group_id: int, repo_record_id: int
@@ -121,6 +143,16 @@ async def get_group_repo_record(
 )
 @openapi.summary("下载仓库记录归档")
 @openapi.tag("仓库记录")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[str].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def archive_group_repo_record(
     request, class_id: int, group_id: int, repo_record_id: int
@@ -171,6 +203,23 @@ async def archive_group_repo_record(
 )
 @openapi.summary("创建仓库记录")
 @openapi.tag("仓库记录")
+@openapi.body(
+    {
+        "application/json": CreateRepoRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[RepoRecordSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=CreateRepoRequest)
 async def create_group_repo_record(
@@ -222,7 +271,6 @@ async def create_group_repo_record(
                 }
             ).encode(),
         )
-        print(sent)
         goflet.jwt_expiration = exp
 
         return BaseDataResponse(
@@ -236,6 +284,16 @@ async def create_group_repo_record(
 )
 @openapi.summary("删除仓库记录")
 @openapi.tag("仓库记录")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def delete_group_repo_record(
     request, class_id: int, group_id: int, repo_record_id: int
@@ -285,6 +343,16 @@ async def delete_group_repo_record(
 )
 @openapi.summary("获取公钥")
 @openapi.tag("仓库记录")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[str].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def get_public_key(request, class_id: int, group_id: int):
     group, class_member, is_manager = service.group.have_group_access(

@@ -27,4 +27,16 @@ def create_app(app_name: str, config_file: str = "config.yaml") -> Sanic:
             "description": "Bearer token, 需要调用登录接口获取",
         },
     )
+    # Set the default response content type to application/json
+    app.ext.openapi.describe(
+        app_name,
+        version="1.0.0",
+        description="""
+本文档为软件协同设计课程过程管理系统-后端API接口文档。
+
+**文档作者**
+- 陆天成(2135060620)
+""",
+    )
+
     return app

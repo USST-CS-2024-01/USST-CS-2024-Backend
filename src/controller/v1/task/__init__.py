@@ -33,6 +33,16 @@ task_bp = Blueprint("task")
 @openapi.summary("获取班级任务列表")
 @openapi.tag("任务接口")
 @openapi.description("获取班级任务列表")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[TaskSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def list_class_tasks(request, class_id: int):
     """
@@ -66,6 +76,23 @@ async def list_class_tasks(request, class_id: int):
 @openapi.summary("创建班级任务")
 @openapi.tag("任务接口")
 @openapi.description("创建班级任务")
+@openapi.body(
+    {
+        "application/json": CreateTaskRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=CreateTaskRequest)
@@ -133,9 +160,24 @@ async def create_class_task(request, class_id: int, body: CreateTaskRequest):
 @task_bp.route("/class/<class_id:int>/task/sequence", methods=["POST"])
 @openapi.summary("设置任务顺序")
 @openapi.tag("任务接口")
-@openapi.description(
-    "设置任务顺序，传入任务ID列表，按照列表顺序设置任务顺序，需要将该班级下的所有任务ID传入，且不能出现重复ID"
+@openapi.description("设置任务顺序，传入任务ID列表，按照列表顺序设置任务顺序，需要将该班级下的所有任务ID传入，且不能出现重复ID")
+@openapi.body(
+    {
+        "application/json": SetTaskSequenceRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
 )
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=SetTaskSequenceRequest)
@@ -165,6 +207,22 @@ async def set_task_sequence(request, class_id: int, body: SetTaskSequenceRequest
 @openapi.summary("更新班级任务")
 @openapi.tag("任务接口")
 @openapi.description("更新班级任务")
+@openapi.body(
+    {
+        "application/json": UpdateTaskRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(json=UpdateTaskRequest)
@@ -260,6 +318,16 @@ async def update_class_task(
 @openapi.summary("获取班级任务")
 @openapi.tag("任务接口")
 @openapi.description("获取班级任务详情")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[TaskSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def get_class_task(request, class_id: int, task_id: int):
     """
@@ -308,9 +376,7 @@ async def get_class_task(request, class_id: int, task_id: int):
 @task_bp.route("/class/<class_id:int>/task/<task_id:int>", methods=["DELETE"])
 @openapi.summary("删除班级任务")
 @openapi.tag("任务接口")
-@openapi.description(
-    "删除班级任务，删除任务后，在前端需要重新设置任务顺序，否则会出现错误"
-)
+@openapi.description("删除班级任务，删除任务后，在前端需要重新设置任务顺序，否则会出现错误")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 async def delete_class_task(request, class_id: int, task_id: int):
@@ -375,6 +441,16 @@ async def delete_class_task(request, class_id: int, task_id: int):
 所有小组的当前任务ID被设置为班级的当前任务ID。
 """
 )
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 async def start_teaching(request, class_id: int):
@@ -485,6 +561,16 @@ async def start_teaching(request, class_id: int):
 @openapi.summary("获取小组任务链")
 @openapi.tag("任务接口")
 @openapi.description("获取小组任务链")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": TaskChainResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def get_group_task_chain(request, class_id: int, group_id: int):
     db = request.app.ctx.db

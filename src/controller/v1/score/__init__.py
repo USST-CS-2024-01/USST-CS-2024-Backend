@@ -1,21 +1,14 @@
 from sanic import Blueprint
 from sanic_ext import openapi
-from sqlalchemy import and_, func, select, or_
-
-from controller.v1.class_.request_model import ListClassRequest
-from controller.v1.class_.response_model import ClassReturnItem
-from controller.v1.role.request_model import CreateGroupRoleRequest
-from middleware.auth import need_login, need_role
-from middleware.validator import validate
-from model import Class, ClassMember, GroupRole, TeacherScore
-from model.enum import UserType, ClassStatus
+from sqlalchemy import select
+from middleware.auth import need_login
+from model import ClassMember, TeacherScore
+from model.enum import UserType
 from model.response_model import (
-    BaseDataResponse,
     BaseListResponse,
-    BaseResponse,
     ErrorResponse,
 )
-from model.schema import ClassSchema, GroupRoleSchema, TaskSchema, UserSchema
+from model.schema import UserSchema
 from service.class_ import has_class_access
 
 score_bp = Blueprint("score")
@@ -24,6 +17,16 @@ score_bp = Blueprint("score")
 @score_bp.route("/class/<class_id:int>/score/list", methods=["GET"])
 @openapi.summary("获取班级成绩列表")
 @openapi.tag("成绩接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def get_score_list(request, class_id: int):
     db = request.app.ctx.db

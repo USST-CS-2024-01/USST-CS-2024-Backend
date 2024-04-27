@@ -23,6 +23,7 @@ from model.response_model import (
     BaseDataResponse,
 )
 from model.schema import AnnouncementSchema
+from util.parameter import generate_parameters_from_pydantic
 
 announcement_bp = Blueprint("announcement", url_prefix="/announcement")
 
@@ -30,6 +31,29 @@ announcement_bp = Blueprint("announcement", url_prefix="/announcement")
 @announcement_bp.route("/create", methods=["POST"])
 @openapi.summary("创建公告")
 @openapi.tag("公告接口")
+@openapi.description(
+    """创建公告，需要提供标题、内容、接收者类型、接收者ID等信息。
+    接收者类型包括individual、group、class、role、all，分别表示个人、小组、班级、角色、所有人。
+    接收者ID根据接收者类型不同而不同，接收者ID为接收者的ID，接收者角色为接收者的角色。
+    附件ID列表为附件的ID列表，可以为空。"""
+)
+@openapi.body(
+    {
+        "application/json": CreateAnnouncementRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 @validate(CreateAnnouncementRequest)
@@ -108,6 +132,23 @@ async def create_announcement(request, body: CreateAnnouncementRequest):
 @announcement_bp.route("/list", methods=["GET"])
 @openapi.summary("获取公告列表")
 @openapi.tag("公告接口")
+@openapi.description(
+    """获取公告列表，需要提供分页信息、排序字段、状态等信息。
+    状态包括all、read、unread，分别表示所有、已读、未读。
+    排序字段包括id、publish_time，分别表示ID、发布时间。"""
+)
+@openapi.definition(
+    parameter=generate_parameters_from_pydantic(ListAnnouncementRequest)
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[AnnouncementSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 @validate(query=ListAnnouncementRequest)
 async def list_announcement(request, query: ListAnnouncementRequest):
@@ -164,6 +205,17 @@ async def list_announcement(request, query: ListAnnouncementRequest):
 @announcement_bp.route("/<announcement_id:int>/read", methods=["POST"])
 @openapi.summary("标记公告已读")
 @openapi.tag("公告接口")
+@openapi.description("标记公告已读，需要提供公告ID。")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def read_announcement(request, announcement_id: int):
     try:
@@ -186,6 +238,15 @@ async def read_announcement(request, announcement_id: int):
 @announcement_bp.route("/<announcement_id:int>", methods=["GET"])
 @openapi.summary("获取公告详情")
 @openapi.tag("公告接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[AnnouncementSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
 @need_login()
 async def get_announcement(request, announcement_id: int):
     try:
@@ -205,6 +266,27 @@ async def get_announcement(request, announcement_id: int):
 @announcement_bp.route("/<announcement_id:int>", methods=["PUT"])
 @openapi.summary("更新公告")
 @openapi.tag("公告接口")
+@openapi.description(
+    """更新公告，需要提供标题、内容、附件ID列表等信息。
+    附件ID列表为附件的ID列表，可以为空。"""
+)
+@openapi.body(
+    {
+        "application/json": UpdateAnnouncementRequest.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    }
+)
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 @validate(json=UpdateAnnouncementRequest)
 async def update_announcement(
@@ -252,6 +334,16 @@ async def update_announcement(
 @announcement_bp.route("/<announcement_id:int>", methods=["DELETE"])
 @openapi.summary("删除公告")
 @openapi.tag("公告接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseResponse.schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
 @need_login()
 async def delete_announcement(request, announcement_id: int):
     try:

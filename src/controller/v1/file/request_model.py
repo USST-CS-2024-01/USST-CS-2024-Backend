@@ -15,7 +15,9 @@ class CreateFileRequest(BaseModel):
 
 
 class UpdateFileRequest(BaseModel):
-    file_name: Optional[str] = Field(None, description="文件名称，最大长度为500", max_length=500)
+    file_name: Optional[str] = Field(
+        None, description="文件名称，最大长度为500", max_length=500
+    )
 
 
 class GetFileListRequest(ListQueryRequest):
