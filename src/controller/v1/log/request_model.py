@@ -24,6 +24,10 @@ class ListLogRequest(ListQueryRequest):
     user_type: Optional[str] = Field(
         None, description="用户类型", pattern=r"^(admin|teacher|student)$"
     )
-    operation_time_start: Optional[int] = Field(None, description="操作时间开始时间戳", ge=1)
-    operation_time_end: Optional[int] = Field(None, description="操作时间结束时间戳", ge=1)
+    operation_time_start: Optional[int] = Field(
+        None, description="操作时间开始时间戳", ge=1
+    )
+    operation_time_end: Optional[int] = Field(
+        None, description="操作时间结束时间戳", ge=1
+    )
     operation_ip: Optional[str] = Field(None, description="操作IP")
