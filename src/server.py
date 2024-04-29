@@ -1,5 +1,6 @@
 from email import header
 from sanic import Sanic
+from sanic_ext import Extend
 
 from config import inject_config
 from controller import inject_controller
@@ -17,6 +18,10 @@ def create_app(app_name: str, config_file: str = "config.yaml") -> Sanic:
     inject_config(app.config, config_file=config_file)
     inject_controller(app)
     inject_listener(app)
+
+    app.config.CORS_ORIGINS = "http://127.0.0.1:3000,http://localhost:3000"
+    Extend(app)
+
     # Add security scheme, Authentication header is required
     app.ext.openapi.add_security_scheme(
         "session",

@@ -126,6 +126,8 @@ async def get_user_list(request, query: ListUserRequest):
 @validate(json=MeUserUpdateRequest)
 async def update_user_info(request, body: MeUserUpdateRequest):
     db = request.app.ctx.db
+    cache = request.app.ctx.cache
+    session_id = request.ctx.session_id
 
     user = request.ctx.user
 
@@ -143,6 +145,8 @@ async def update_user_info(request, body: MeUserUpdateRequest):
     with db() as sess:
         sess.execute(stmt)
         sess.commit()
+
+    await cache.delete("session_no_check:" + session_id)
 
     request.app.ctx.log.add_log(
         request=request,
