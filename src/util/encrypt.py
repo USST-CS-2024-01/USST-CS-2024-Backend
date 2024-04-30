@@ -4,6 +4,7 @@ from binascii import crc32
 
 import bcrypt
 from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
 
 
 def generate_key_iv() -> tuple:
@@ -29,6 +30,8 @@ def decrypt_aes(key: bytes, iv: bytes, data: bytes) -> bytes:
     decrypted = cipher.decrypt(data)
 
     try:
+        # pkcs7 padding
+        decrypted = unpad(decrypted, AES.block_size)
         decrypted = decrypted.decode("utf-8").strip().encode("utf-8")
     except Exception:
         raise ValueError("Invalid password")
