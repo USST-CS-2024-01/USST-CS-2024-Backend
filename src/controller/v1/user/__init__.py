@@ -77,6 +77,10 @@ async def get_user_list(request, query: ListUserRequest):
                 User.name.like(f"%{query.kw}%"),
             )
         )
+    if query.user_type:
+        stmt = stmt.where(User.user_type == query.user_type)
+    if query.account_status:
+        stmt = stmt.where(User.account_status == query.account_status)
     if query.order_by:
         stmt = stmt.order_by(
             # 此处使用 getattr 函数获取排序字段，asc和desc是function类型，需要调用
@@ -272,6 +276,8 @@ async def update_user(request, user_id, body: UserUpdateRequest):
     if user.id == request.ctx.user.id or user.id == 1:
         if "user_type" in update_dict:
             update_dict.pop("user_type")
+        if "account_status" in update_dict:
+            update_dict.pop("account_status")
 
     # 如果修改了密码，需要重新加密
     if "password" in update_dict:
