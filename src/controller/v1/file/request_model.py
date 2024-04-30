@@ -15,18 +15,19 @@ class CreateFileRequest(BaseModel):
 
 
 class UpdateFileRequest(BaseModel):
-    file_name: Optional[str] = Field(
-        None, description="文件名称，最大长度为500", max_length=500
-    )
+    file_name: Optional[str] = Field(None, description="文件名称，最大长度为500", max_length=500)
 
 
 class GetFileListRequest(ListQueryRequest):
     order_by: Optional[str] = Field(
         None,
         description="排序字段",
-        pattern=r"^(id|name|file_type|file_size|create_date|modify|date)$",
+        pattern=r"^(id|name|file_type|file_size|create_date|modify_date)$",
     )
     kw: Optional[str] = Field(None, description="关键字")
     user_id: Optional[int] = Field(None, description="用户ID")
     class_id: Optional[int] = Field(None, description="班级ID")
     group_id: Optional[int] = Field(None, description="小组ID")
+    file_type: Optional[str] = Field(
+        None, description="文件类型", pattern=r"^(document|other)$"
+    )

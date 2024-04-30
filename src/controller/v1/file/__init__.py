@@ -260,6 +260,8 @@ async def update_file_info(request, file_id: int, body: UpdateFileRequest):
     if new_file_name:
         if not access["rename"]:
             return ErrorResponse.new_error(403, "No access to rename the file")
+    else:
+        return ErrorResponse.new_error(400, "Invalid file name")
 
     with db() as session:
         session.add(file)
@@ -355,7 +357,8 @@ async def onlyoffice_download_file(request, file_id: int):
 @openapi.tag("文件接口")
 @openapi.description(
     """
-    该接口用于渲染OnlyOffice文件，用户不应直接访问该接口
+    该接口用于渲染OnlyOffice文件，即开启协同编辑，将渲染一个OnlyOffice编辑器页面给用户。
+    该接口用户在调用时，需要在query中传入token参数，该参数为用户的登录token。
 """
 )
 @openapi.response(
@@ -567,6 +570,8 @@ async def get_file_list(request, query: GetFileListRequest):
         and_stmt.append(File.owner_user_id == query.user_id)
     if query.kw:
         and_stmt.append(File.name.like(f"%{query.kw}%"))
+    if query.file_type:
+        and_stmt.append(File.file_type == query.file_type)
     if query.order_by:
         stmt = stmt.order_by(
             # 此处使用 getattr 函数获取排序字段，asc和desc是function类型，需要调用
