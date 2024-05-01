@@ -1,4 +1,4 @@
-from sanic import Blueprint
+from sanic import Blueprint, redirect
 from sanic_ext import openapi
 from sqlalchemy import func, select, or_
 
@@ -395,3 +395,14 @@ async def get_user_avatar(request, user_id):
     return BaseDataResponse(
         code=200, message="ok", data={"avatar": avatar}
     ).json_response()
+
+
+@user_bp.route("/<user_id:int>/avatar/img", methods=["GET"])
+@openapi.summary("获取用户头像图片")
+@openapi.tag("用户接口")
+@openapi.parameter(name="user_id", description="用户ID", in_="path", required=True)
+@openapi.secured("session")
+@need_login(where="query")
+async def get_user_avatar_img(request, user_id):
+    avatar = await service.onlyoffice.get_avatar_url(request, user_id)
+    return redirect(avatar)
