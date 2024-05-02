@@ -18,6 +18,7 @@ class ListClassRequest(ListQueryRequest):
         pattern=r"^(not_started|grouping|teaching|finished)$",
     )
     user_id: Optional[int] = Field(None, description="用户ID，用于查询用户所在班级")
+    as_user: Optional[bool] = Field(None, description="是否作为用户查询，启用后，将一次性返回所有班级信息")
 
 
 class ChangeClassInfoRequest(BaseModel):
@@ -28,9 +29,7 @@ class ChangeClassInfoRequest(BaseModel):
 
 
 class AddClassMemberRequest(BaseModel):
-    user_dict: Dict[str, bool] = Field(
-        ..., description="用户ID列表，key 为用户ID，value 为是否为教师"
-    )
+    user_dict: Dict[str, bool] = Field(..., description="用户ID列表，key 为用户ID，value 为是否为教师")
 
 
 class RemoveClassMemberRequest(BaseModel):
