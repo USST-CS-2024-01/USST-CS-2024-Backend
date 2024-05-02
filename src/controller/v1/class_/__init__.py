@@ -194,7 +194,7 @@ async def get_class_info(request, class_id: int):
         stu_count = len(stu_list)
         tea_list = (
             session.query(ClassMember)
-            .filter(ClassMember.is_teacher is True, ClassMember.class_id == class_id)
+            .filter(ClassMember.is_teacher.is_(True), ClassMember.class_id == class_id)
             .all()
         )
 
@@ -294,6 +294,12 @@ async def update_class_info(request, class_id: int, body: ChangeClassInfoRequest
 @need_role([UserType.admin])
 async def delete_class(request, class_id: int):
     db = request.app.ctx.db
+
+    if class_id == 1:
+        return ErrorResponse.new_error(
+            400,
+            "默认班级不可删除",
+        )
 
     if not service.class_.has_class_access(request, class_id):
         return ErrorResponse.new_error(

@@ -372,8 +372,8 @@ class ClassMember(Base):
 
     roles = relationship("GroupRole", secondary="group_member_role")
 
-    user = relationship("User", backref="class_members")
-    class_ = relationship("Class", backref="class_members")
+    user = relationship("User", backref="class_member")
+    class_ = relationship("Class", backref="class_member")
 
     # Indexes
     __table_args__ = (UniqueConstraint("user_id", "class_id"),)

@@ -77,6 +77,6 @@ def timestamp_to_datetime(timestamp: int) -> datetime or None:
     Returns:
     A string representing the datetime in MySQL format.
     """
-    if not timestamp:
+    if timestamp is None or timestamp < 0:
         return None
     return datetime.fromtimestamp(timestamp)
