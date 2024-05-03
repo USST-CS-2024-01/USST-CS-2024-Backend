@@ -11,7 +11,7 @@ from controller.v1.task.request_model import (
     SetTaskSequenceRequest,
     UpdateTaskRequest,
 )
-from controller.v1.task.response_model import TaskChainResponse
+from controller.v1.task.response_model import TaskChainResponse, TaskListResponse
 from middleware.auth import need_login, need_role
 from middleware.validator import validate
 from model import Task, GroupRole, ClassMember, Group, GroupMemberRole
@@ -37,7 +37,7 @@ task_bp = Blueprint("task")
     200,
     description="成功",
     content={
-        "application/json": BaseListResponse[TaskSchema].schema(
+        "application/json": TaskListResponse.schema(
             ref_template="#/components/schemas/{model}"
         )
     },
@@ -54,21 +54,24 @@ async def list_class_tasks(request, class_id: int):
     # user = request.ctx.user
     db = request.app.ctx.db
 
-    if not has_class_access(request, class_id):
+    clazz = has_class_access(request, class_id)
+    if not clazz:
         return ErrorResponse.new_error(
             404,
             "Class Not Found",
         )
 
-    stmt = select(Task).where(Task.class_id == class_id)
+    stmt = select(Task).where(Task.class_id.__eq__(class_id))
+    first_task_id = clazz.first_task_id
+    locked_tasks = service.task.get_locked_tasks(request, class_id, nocheck=True)
+    current_task_id = locked_tasks[-1].id if locked_tasks else None
 
     with db() as session:
         result = session.execute(stmt).scalars().all()
-        return BaseListResponse(
+        return TaskListResponse(
             data=[TaskSchema.model_validate(item) for item in result],
-            total=len(result),
-            page=1,
-            page_size=len(result),
+            current_task_id=current_task_id,
+            first_task_id=first_task_id,
         ).json_response()
 
 
@@ -166,9 +169,7 @@ async def create_class_task(request, class_id: int, body: CreateTaskRequest):
 @task_bp.route("/class/<class_id:int>/task/sequence", methods=["POST"])
 @openapi.summary("设置任务顺序")
 @openapi.tag("任务接口")
-@openapi.description(
-    "设置任务顺序，传入任务ID列表，按照列表顺序设置任务顺序，需要将该班级下的所有任务ID传入，且不能出现重复ID"
-)
+@openapi.description("设置任务顺序，传入任务ID列表，按照列表顺序设置任务顺序，需要将该班级下的所有任务ID传入，且不能出现重复ID")
 @openapi.body(
     {
         "application/json": SetTaskSequenceRequest.schema(
@@ -265,9 +266,9 @@ async def update_class_task(
             400,
             "Nothing to update",
         )
-    if update_dict.get("publish_time"):
+    if update_dict.get("publish_time") is not None:
         update_dict["publish_time"] = timestamp_to_datetime(update_dict["publish_time"])
-    if update_dict.get("deadline"):
+    if update_dict.get("deadline") is not None:
         update_dict["deadline"] = timestamp_to_datetime(update_dict["deadline"])
 
     # 需要判定角色ID是否属于该班级
@@ -312,6 +313,12 @@ async def update_class_task(
             "grade_percentage", task.grade_percentage
         )
 
+        request.app.ctx.log.add_log(
+            request=request,
+            log_type="task:update",
+            content=f"Update task {task.name} in class {class_id}",
+        )
+
         session.commit()
 
     if update_dict.get("attached_files"):
@@ -321,12 +328,6 @@ async def update_class_task(
             )
         except ValueError as e:
             return ErrorResponse.new_error(400, str(e))
-
-    request.app.ctx.log.add_log(
-        request=request,
-        log_type="task:update",
-        content=f"Update task {task.name} in class {class_id}",
-    )
 
     return BaseDataResponse(
         code=200,
@@ -380,6 +381,8 @@ async def get_class_task(request, class_id: int, task_id: int):
                 "Task Not Found",
             )
 
+        _ = task.role
+
         # 授予临时文件访问权限
         files = task.attached_files
         file_ids = [file.id for file in files]
@@ -396,9 +399,7 @@ async def get_class_task(request, class_id: int, task_id: int):
 @task_bp.route("/class/<class_id:int>/task/<task_id:int>", methods=["DELETE"])
 @openapi.summary("删除班级任务")
 @openapi.tag("任务接口")
-@openapi.description(
-    "删除班级任务，删除任务后，在前端需要重新设置任务顺序，否则会出现错误"
-)
+@openapi.description("删除班级任务，删除任务后，在前端需要重新设置任务顺序，否则会出现错误")
 @need_login()
 @need_role([UserType.admin, UserType.teacher])
 async def delete_class_task(request, class_id: int, task_id: int):

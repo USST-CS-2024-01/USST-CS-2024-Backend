@@ -217,6 +217,7 @@ class TaskSchema(BaseJsonAbleModel):
     deadline: datetime
     grade_percentage: float
     next_task_id: Optional[int] = None
+    role: Optional[GroupRoleSchema] = None
 
 
 @openapi.component()

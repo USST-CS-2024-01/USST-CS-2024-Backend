@@ -170,9 +170,7 @@ def change_class_task_sequence(request, class_id: int, task_id_list: list[int]) 
         # 检查修改后的任务链中，前面部分是否与已锁定的任务连完全相同
         for i, task in enumerate(locked_tasks):
             if task.id != task_id_list[i]:
-                raise ValueError(
-                    "Locked tasks are not consistent with the new task chain."
-                )
+                raise ValueError("已经锁定的任务顺序无法调整。")
 
         session.commit()
 

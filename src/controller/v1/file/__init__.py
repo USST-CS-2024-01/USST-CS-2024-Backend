@@ -86,7 +86,7 @@ async def start_file_upload_session(request, body: CreateFileRequest):
 
     elif body.owner_type == FileOwnerType.clazz:
         clazz = service.class_.has_class_access(request, body.owner_id)
-        if not clazz or user.user_type != UserType.teacher:
+        if not clazz or user.user_type == UserType.student:
             return ErrorResponse.new_error(403, "Permission denied")
 
     session_id, upload_url = await service.file.start_upload_session(
