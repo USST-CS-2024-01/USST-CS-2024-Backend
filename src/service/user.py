@@ -62,8 +62,8 @@ async def get_avatar_url(request, user_id: int) -> str:
     else:
         user_email = user.email
 
-    email_md5 = hashlib.md5(user_email.encode()).hexdigest()
-    avatar_url = f"https://sdn.geekzu.org/avatar/{email_md5}"
+    email_sha = hashlib.sha256(user_email.encode()).hexdigest()
+    avatar_url = f"https://sdn.geekzu.org/avatar/{email_sha}?d=identicon"
 
     await cache.set(cache_key, avatar_url, expire=3600)
     return avatar_url

@@ -49,7 +49,7 @@ async def start_group(request, class_id: int):
     if class_id == 1:
         return ErrorResponse.new_error(
             400,
-            "The default class cannot be grouped",
+            "模板班级不允许进行分组操作",
         )
 
     clazz = service.class_.has_class_access(request, class_id)
@@ -126,7 +126,7 @@ async def get_group_list(request, class_id: int):
             subqueryload(Group.members).joinedload(ClassMember.user),
             subqueryload(Group.members).joinedload(ClassMember.roles),
         )
-        .where(Group.class_id == class_id)
+        .where(Group.class_id.__eq__(class_id))
     )
 
     with db() as session:
@@ -155,7 +155,7 @@ async def get_group_list(request, class_id: int):
     200,
     description="成功",
     content={
-        "application/json": BaseDataResponse.schema(
+        "application/json": BaseDataResponse[GroupSchema].schema(
             ref_template="#/components/schemas/{model}"
         )
     },
@@ -184,14 +184,14 @@ async def create_group(request, class_id: int, body: CreateGroupRequest):
     if clazz.status != ClassStatus.grouping:
         return ErrorResponse.new_error(
             403,
-            "Class is not in group status",
+            "班级不在分组状态，无法创建分组",
         )
 
     with db() as session:
         # 检查是否已经有分组
         stmt = select(ClassMember).where(
-            ClassMember.class_id == class_id,
-            ClassMember.user_id == body.leader,
+            ClassMember.class_id.__eq__(class_id),
+            ClassMember.user_id.__eq__(body.leader),
         )
 
         result = session.execute(stmt).scalar()
@@ -207,7 +207,7 @@ async def create_group(request, class_id: int, body: CreateGroupRequest):
         ):
             return ErrorResponse.new_error(
                 400,
-                "Leader already in a group",
+                "组长已经在一个小组中",
             )
 
         group = Group(
@@ -235,7 +235,7 @@ async def create_group(request, class_id: int, body: CreateGroupRequest):
         # 新增组长信息
         leader = session.execute(
             select(GroupRole).where(
-                GroupRole.class_id == class_id,
+                GroupRole.class_id.__eq__(class_id),
                 GroupRole.is_manager.is_(True),
             )
         ).scalar()
@@ -250,20 +250,20 @@ async def create_group(request, class_id: int, body: CreateGroupRequest):
 
         session.commit()
 
-    request.app.ctx.log.add_log(
-        log_type="group:create",
-        content="Class {} created group {} at {}".format(
-            clazz.name,
-            group.name,
-            time.strftime("%Y-%m-%d %H:%M:%S"),
-        ),
-        user=request.ctx.user,
-        request=request,
-    )
+        request.app.ctx.log.add_log(
+            log_type="group:create",
+            content="Class {} created group {} at {}".format(
+                clazz.name,
+                group.name,
+                time.strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+            user=request.ctx.user,
+            request=request,
+        )
 
-    return BaseDataResponse(
-        data=None,
-    ).json_response()
+        return BaseDataResponse(
+            data=GroupSchema.model_validate(group),
+        ).json_response()
 
 
 @group_bp.route(
@@ -308,7 +308,9 @@ async def join_group(request, class_id: int, group_id: int, class_member_id: int
 
     with db() as session:
         group = session.execute(
-            select(Group).where(Group.id == group_id, Group.class_id == class_id)
+            select(Group).where(
+                Group.id.__eq__(group_id), Group.class_id.__eq__(class_id)
+            )
         ).scalar()
         if not group:
             return ErrorResponse.new_error(
@@ -320,13 +322,13 @@ async def join_group(request, class_id: int, group_id: int, class_member_id: int
         if group.status != GroupStatus.pending:
             return ErrorResponse.new_error(
                 403,
-                "Group is not in pending status",
+                "小组已经审核通过，成员无法变更",
             )
 
         # 获取目标班级成员
         class_member_stmt = select(ClassMember).where(
-            ClassMember.class_id == class_id,
-            ClassMember.id == class_member_id,
+            ClassMember.class_id.__eq__(class_id),
+            ClassMember.id.__eq__(class_member_id),
         )
         class_member = session.execute(class_member_stmt).scalar()
         if not class_member:
@@ -342,14 +344,14 @@ async def join_group(request, class_id: int, group_id: int, class_member_id: int
         ):
             return ErrorResponse.new_error(
                 400,
-                "Class Member already in a group",
+                "该成员已经在一个小组中",
             )
 
         # 判断这个小组是否已经满员（满员条件：小组成员数量 >= 小组角色数量，值得注意的是，小组成员数量包括未审核的成员）
         role_list = (
             session.execute(
                 select(GroupRole).where(
-                    GroupRole.class_id == class_id,
+                    GroupRole.class_id.__eq__(class_id),
                 )
             )
             .scalars()
@@ -360,7 +362,7 @@ async def join_group(request, class_id: int, group_id: int, class_member_id: int
         if len(group.members) >= role_count:
             return ErrorResponse.new_error(
                 400,
-                "Group is full",
+                "小组已经满员，没有可以分配的角色",
             )
 
         if request.ctx.user.user_type == UserType.student:
@@ -372,7 +374,7 @@ async def join_group(request, class_id: int, group_id: int, class_member_id: int
                 ):
                     return ErrorResponse.new_error(
                         400,
-                        "Class Member already being invited",
+                        "该成员正在被邀请中，无法再次邀请",
                     )
                 request_status = GroupMemberRoleStatus.member_review
             else:  # 自行申请，可以覆盖之前的邀请
@@ -461,7 +463,9 @@ async def leave_group(request, class_id: int, group_id: int, class_member_id: in
 
     with db() as session:
         group = session.execute(
-            select(Group).where(Group.id == group_id, Group.class_id == class_id)
+            select(Group).where(
+                Group.id.__eq__(group_id), Group.class_id.__eq__(class_id)
+            )
         ).scalar()
         # 判断分组是否存在
         if not group:
@@ -473,25 +477,25 @@ async def leave_group(request, class_id: int, group_id: int, class_member_id: in
         if group.status != GroupStatus.pending:
             return ErrorResponse.new_error(
                 403,
-                "Group is not in pending status",
+                "小组已通过审核，无法更改成员信息",
             )
 
         # 获取自己的班级成员信息
         self_class_member = session.execute(
             select(ClassMember).where(
-                ClassMember.class_id == class_id,
-                ClassMember.group_id == group_id,
-                ClassMember.user_id == request.ctx.user.id,
-                ClassMember.status == GroupMemberRoleStatus.approved,
+                ClassMember.class_id.__eq__(class_id),
+                ClassMember.group_id.__eq__(group_id),
+                ClassMember.user_id.__eq__(request.ctx.user.id),
+                ClassMember.status.__eq__(GroupMemberRoleStatus.approved),
             )
         ).scalar()
 
         # 获取目标班级成员信息
         class_member = session.execute(
             select(ClassMember).where(
-                ClassMember.class_id == class_id,
-                ClassMember.group_id == group_id,
-                ClassMember.id == class_member_id,
+                ClassMember.class_id.__eq__(class_id),
+                ClassMember.group_id.__eq__(group_id),
+                ClassMember.id.__eq__(class_member_id),
             )
         ).scalar()
         if not class_member:
@@ -518,13 +522,26 @@ async def leave_group(request, class_id: int, group_id: int, class_member_id: in
             if self_class_member.id != class_member_id and not is_leader:
                 return ErrorResponse.new_error(
                     403,
-                    "You can only leave yourself",
+                    "你只能自己退出",
                 )
             # 如果是组长，不能退出自己
             elif is_leader and self_class_member.id == class_member_id:
                 return ErrorResponse.new_error(
                     403,
-                    "Leader cannot leave group",
+                    "组长不能离开自己的小组",
+                )
+        else:
+            # 判断移除的成员是否是组长
+            is_leader = False
+            for role in class_member.roles:
+                if role.is_manager:
+                    is_leader = True
+                    break
+            # 如果是组长，不能被移除
+            if is_leader:
+                return ErrorResponse.new_error(
+                    403,
+                    "组长不能被移除",
                 )
 
         # 更新班级成员的分组信息
@@ -610,7 +627,9 @@ async def approve_group_member(
 
     with db() as session:
         group = session.execute(
-            select(Group).where(Group.id == group_id, Group.class_id == class_id)
+            select(Group).where(
+                Group.id.__eq__(group_id), Group.class_id.__eq__(class_id)
+            )
         ).scalar()
         # 判断分组是否存在
         if not group:
@@ -623,15 +642,15 @@ async def approve_group_member(
         if group.status != GroupStatus.pending:
             return ErrorResponse.new_error(
                 403,
-                "Group is not in pending status",
+                "小组已通过审核，无法更改成员信息",
             )
 
         # 获取目标班级成员信息
         class_member = session.execute(
             select(ClassMember).where(
-                ClassMember.class_id == class_id,
-                ClassMember.group_id == group_id,
-                ClassMember.id == class_member_id,
+                ClassMember.class_id.__eq__(class_id),
+                ClassMember.group_id.__eq__(group_id),
+                ClassMember.id.__eq__(class_member_id),
             )
         ).scalar()
         # 判断目标成员是否在分组中
@@ -644,10 +663,10 @@ async def approve_group_member(
         # 获取自己的班级成员信息
         self_class_member = session.execute(
             select(ClassMember).where(
-                ClassMember.class_id == class_id,
-                ClassMember.group_id == group_id,
+                ClassMember.class_id.__eq__(class_id),
+                ClassMember.group_id.__eq__(group_id),
                 ClassMember.user_id == request.ctx.user.id,
-                ClassMember.status == GroupMemberRoleStatus.approved,
+                ClassMember.status.__eq__(GroupMemberRoleStatus.approved),
             )
         ).scalar()
 
@@ -745,14 +764,55 @@ async def get_group_member(request, class_id: int, group_id: int, class_member_i
     with db() as session:
         class_member = session.execute(
             select(ClassMember).where(
-                ClassMember.group_id == group_id,
-                ClassMember.class_id == class_id,
-                ClassMember.id == class_member_id,
+                ClassMember.group_id.__eq__(group_id),
+                ClassMember.class_id.__eq__(class_id),
+                ClassMember.id.__eq__(class_member_id),
             )
         ).scalar()
 
         if not class_member:
             return ErrorResponse.new_error(404, "Group member not found.")
+
+        return BaseDataResponse(
+            data=ClassMemberSchema.model_validate(class_member)
+        ).json_response()
+
+
+@group_bp.route(
+    "/class/<class_id:int>/group/my",
+    methods=["GET"],
+)
+@openapi.summary("查询我的分组信息")
+@openapi.tag("分组接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[ClassMemberSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
+@need_login()
+async def get_my_group_member(request, class_id: int):
+    db = request.app.ctx.db
+
+    # 判断用户是否有班级访问权限
+    clazz = service.class_.has_class_access(request, class_id)
+    if not clazz:
+        return ErrorResponse.new_error(404, "Class not found.")
+
+    with db() as session:
+        class_member = session.execute(
+            select(ClassMember).where(
+                ClassMember.class_id.__eq__(class_id),
+                ClassMember.user_id == request.ctx.user.id,
+            )
+        ).scalar()
+
+        if not class_member:
+            return ErrorResponse.new_error(404, "Class member not found.")
 
         return BaseDataResponse(
             data=ClassMemberSchema.model_validate(class_member)
@@ -824,10 +884,10 @@ async def update_group_member(
         # 获取组员信息
         class_member = session.execute(
             select(ClassMember).where(
-                ClassMember.group_id == group_id,
-                ClassMember.class_id == class_id,
-                ClassMember.id == class_member_id,
-                ClassMember.status == GroupMemberRoleStatus.approved,
+                ClassMember.group_id.__eq__(group_id),
+                ClassMember.class_id.__eq__(class_id),
+                ClassMember.id.__eq__(class_member_id),
+                ClassMember.status.__eq__(GroupMemberRoleStatus.approved),
             )
         ).scalar()
         if not class_member:
@@ -841,7 +901,7 @@ async def update_group_member(
             # 获取班级角色
             class_role_id = (
                 session.execute(
-                    select(GroupRole.id).where(GroupRole.class_id == class_id)
+                    select(GroupRole.id).where(GroupRole.class_id.__eq__(class_id))
                 )
                 .scalars()
                 .all()
@@ -849,7 +909,8 @@ async def update_group_member(
             class_role_leader_ids = (
                 session.execute(
                     select(GroupRole.id).where(
-                        GroupRole.class_id == class_id, GroupRole.is_manager.is_(True)
+                        GroupRole.class_id.__eq__(class_id),
+                        GroupRole.is_manager.is_(True),
                     )
                 )
                 .scalars()
@@ -873,9 +934,7 @@ async def update_group_member(
 
             # 组长角色不可修改
             if set(ori_role_group_leader_ids) != set(new_role_group_leader_ids):
-                return ErrorResponse.new_error(
-                    400, "Group leader role cannot be changed."
-                )
+                return ErrorResponse.new_error(400, "组长角色不可修改")
 
             # 获取其他该组成员的角色ID
             other_members = [
@@ -887,9 +946,7 @@ async def update_group_member(
 
             # 检查是否存在与其他组员角色冲突
             if set(new_role_ids) & set(other_role_ids):
-                return ErrorResponse.new_error(
-                    400, "Role ID conflict with other members."
-                )
+                return ErrorResponse.new_error(400, "存在与其他组员角色冲突的角色")
 
             # 更新组员角色
             stmt = GroupMemberRole.__table__.delete().where(
@@ -992,7 +1049,7 @@ async def get_group(request, class_id: int, group_id: int):
 async def update_group(request, class_id: int, group_id: int, body: UpdateGroupRequest):
     db = request.app.ctx.db
 
-    if body.group_name is None:
+    if body.name is None:
         return ErrorResponse.new_error(400, "No data to update.")
 
     # 判断用户是否有班级访问权限
@@ -1007,7 +1064,7 @@ async def update_group(request, class_id: int, group_id: int, body: UpdateGroupR
 
     with db() as session:
         session.add(group)
-        group.name = body.group_name
+        group.name = body.name
         session.commit()
 
     request.app.ctx.log.add_log(
@@ -1062,7 +1119,7 @@ async def delete_group(request, class_id: int, group_id: int):
     if not is_manager:
         return ErrorResponse.new_error(403, "You are not the leader of this group.")
     if group.status != GroupStatus.pending:
-        return ErrorResponse.new_error(403, "Group is not in pending status.")
+        return ErrorResponse.new_error(403, "小组已经审核通过，无法解散")
 
     with db() as session:
         session.add(group)
@@ -1073,8 +1130,8 @@ async def delete_group(request, class_id: int, group_id: int):
         class_members = (
             session.execute(
                 select(ClassMember).where(
-                    ClassMember.group_id == group_id,
-                    ClassMember.class_id == class_id,
+                    ClassMember.group_id.__eq__(group_id),
+                    ClassMember.class_id.__eq__(class_id),
                 )
             )
             .scalars()
@@ -1153,12 +1210,12 @@ async def approve_group(request, class_id: int, group_id: int):
     if not group:
         return ErrorResponse.new_error(404, "Group not found.")
     if group.status != GroupStatus.pending:
-        return ErrorResponse.new_error(403, "Group is not in pending status.")
+        return ErrorResponse.new_error(403, "小组已经审核通过，无法再次审核")
 
     with db() as session:
         session.add(group)
         if group.clazz.status != ClassStatus.grouping:
-            return ErrorResponse.new_error(403, "Class is not in grouping status.")
+            return ErrorResponse.new_error(403, "当前班级不在分组状态")
 
         group.status = GroupStatus.normal
         session.commit()
@@ -1214,12 +1271,12 @@ async def revoke_group_approval(request, class_id: int, group_id: int):
     if not group:
         return ErrorResponse.new_error(404, "Group not found.")
     if group.status != GroupStatus.normal:
-        return ErrorResponse.new_error(403, "Group is not in normal status.")
+        return ErrorResponse.new_error(403, "小组未审核通过，无法撤销审核")
 
     with db() as session:
         session.add(group)
         if group.clazz.status != ClassStatus.grouping:
-            return ErrorResponse.new_error(403, "Class is not in grouping status.")
+            return ErrorResponse.new_error(403, "当前班级不在分组状态")
 
         group.status = GroupStatus.pending
         session.commit()

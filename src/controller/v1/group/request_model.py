@@ -9,9 +9,7 @@ class CreateGroupRequest(BaseModel):
 
 
 class UpdateGroupMemberRequest(BaseModel):
-    repo_usernames: List[str] = Field(
-        None, description="成员使用的Git代码仓库用户名列表"
-    )
+    repo_usernames: List[str] = Field(None, description="成员使用的Git代码仓库用户名列表")
     role_list: List[int] = Field(
         None,
         description="设定的用户角色ID，每个角色在一组中应当不出现重复，同时，组长角色无法手动设定给他人，无法解除",
@@ -19,4 +17,4 @@ class UpdateGroupMemberRequest(BaseModel):
 
 
 class UpdateGroupRequest(BaseModel):
-    group_name: str = Field(None, description="分组名称", min_length=1, max_length=50)
+    name: str = Field(None, description="分组名称", min_length=1, max_length=50)
