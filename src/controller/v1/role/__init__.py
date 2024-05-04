@@ -178,11 +178,6 @@ async def update_class_role(
             404,
             "Class Not Found",
         )
-    if clazz.status != ClassStatus.not_started:
-        return ErrorResponse.new_error(
-            400,
-            "Role can only be updated when class status is not_started",
-        )
 
     insert_dict = body.model_dump(exclude_unset=True)
     if not insert_dict:
@@ -190,6 +185,9 @@ async def update_class_role(
             400,
             "No data to update",
         )
+
+    if clazz.status != ClassStatus.not_started:
+        del insert_dict["is_manager"]
 
     with db() as sess:
         stmt = select(GroupRole).where(

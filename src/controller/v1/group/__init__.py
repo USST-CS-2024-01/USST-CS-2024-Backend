@@ -30,9 +30,7 @@ group_bp = Blueprint("group")
 @group_bp.route("/class/<class_id:int>/group/start", methods=["POST"])
 @openapi.summary("开始分组")
 @openapi.tag("分组接口")
-@openapi.description(
-    "将班级状态推进为分组中状态，此时学生可以进行分组操作，老师可以进行分组设置和审核，班级状态的变更无法回退，需要谨慎操作。"
-)
+@openapi.description("将班级状态推进为分组中状态，此时学生可以进行分组操作，老师可以进行分组设置和审核，班级状态的变更无法回退，需要谨慎操作。")
 @openapi.response(
     200,
     description="成功",
@@ -47,6 +45,12 @@ group_bp = Blueprint("group")
 @need_role([UserType.admin, UserType.teacher])
 async def start_group(request, class_id: int):
     db = request.app.ctx.db
+
+    if class_id == 1:
+        return ErrorResponse.new_error(
+            400,
+            "The default class cannot be grouped",
+        )
 
     clazz = service.class_.has_class_access(request, class_id)
     if not clazz:
@@ -72,7 +76,7 @@ async def start_group(request, class_id: int):
         if leader_count != 1:
             return ErrorResponse.new_error(
                 400,
-                "Leader role was set incorrectly",
+                "组长角色没有正确设置，请保证有且只有一个组长角色",
             )
 
         clazz.status = ClassStatus.grouping

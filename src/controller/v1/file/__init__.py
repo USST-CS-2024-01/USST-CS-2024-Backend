@@ -568,6 +568,8 @@ async def get_file_list(request, query: GetFileListRequest):
         and_stmt.append(File.owner_group_id == query.group_id)
     if query.user_id:
         and_stmt.append(File.owner_user_id == query.user_id)
+    if query.user_id and not query.class_id:
+        and_stmt.append(File.owner_clazz_id.is_(None))
     if query.kw:
         and_stmt.append(File.name.like(f"%{query.kw}%"))
     if query.file_type:

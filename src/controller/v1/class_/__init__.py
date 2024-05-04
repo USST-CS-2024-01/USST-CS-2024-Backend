@@ -257,6 +257,9 @@ async def update_class_info(request, class_id: int, body: ChangeClassInfoRequest
         )
 
     update_dict = body.dict(exclude_unset=True)
+    if request.ctx.user.user_type != UserType.admin:
+        update_dict.pop("name", None)  # 非管理员不可修改班级名称
+
     if not update_dict:
         return ErrorResponse.new_error(
             400,
@@ -437,10 +440,10 @@ async def add_class_member(request, class_id: int, body: AddClassMemberRequest):
 
         for user_id in filtered_user_id_list:
             if request.ctx.user.user_type != UserType.admin:
-                if body.user_dict[user_id]:
-                    result.failed_list.append(user_id)
-                    result.failed_count += 1
-                    continue
+                return ErrorResponse.new_error(
+                    403,
+                    "您没有权限添加成员",
+                )
             member = ClassMember(
                 class_id=class_id,
                 user_id=int(user_id),
@@ -526,7 +529,10 @@ async def remove_class_member(request, class_id: int, body: RemoveClassMemberReq
             )
         )
         if request.ctx.user.user_type != UserType.admin:
-            member_id_list = member_id_list.where(ClassMember.is_teacher.is_(False))
+            return ErrorResponse.new_error(
+                403,
+                "您没有权限删除成员",
+            )
 
         member_id_list = session.execute(member_id_list).scalars().all()
         member_id_list = [x for x in member_id_list]
