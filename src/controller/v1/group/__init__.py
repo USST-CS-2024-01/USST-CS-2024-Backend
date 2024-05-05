@@ -207,7 +207,7 @@ async def create_group(request, class_id: int, body: CreateGroupRequest):
         ):
             return ErrorResponse.new_error(
                 400,
-                "组长已经在一个小组中",
+                "已经在一个小组中，无法创建新小组",
             )
 
         group = Group(
@@ -486,7 +486,6 @@ async def leave_group(request, class_id: int, group_id: int, class_member_id: in
                 ClassMember.class_id.__eq__(class_id),
                 ClassMember.group_id.__eq__(group_id),
                 ClassMember.user_id.__eq__(request.ctx.user.id),
-                ClassMember.status.__eq__(GroupMemberRoleStatus.approved),
             )
         ).scalar()
 
@@ -666,7 +665,6 @@ async def approve_group_member(
                 ClassMember.class_id.__eq__(class_id),
                 ClassMember.group_id.__eq__(group_id),
                 ClassMember.user_id == request.ctx.user.id,
-                ClassMember.status.__eq__(GroupMemberRoleStatus.approved),
             )
         ).scalar()
 
