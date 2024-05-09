@@ -161,6 +161,7 @@ class GroupMeetingSchema(BaseJsonAbleModel):
     related_files: List["FileSchema"]
     task_id: Optional[int] = None
     publisher: int
+    meeting_summary: Optional[FileSchema] = None
 
 
 @openapi.component()

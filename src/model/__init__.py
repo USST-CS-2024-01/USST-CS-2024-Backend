@@ -135,8 +135,8 @@ class GroupTask(Base):
     )
     publisher = Column(
         Integer,
-        ForeignKey("group_role.id", ondelete="CASCADE", onupdate="CASCADE"),
-        nullable=False,
+        ForeignKey("user.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
     )  # 组内任务以角色区分发布者
     related_files = relationship("File", secondary="group_task_attachment")
     assignees = relationship("GroupRole", secondary="group_task_assignee")
@@ -189,6 +189,13 @@ class GroupMeeting(Base):
     participants = relationship("User", secondary="group_meeting_participant")
     meeting_type = Column(String(50), nullable=False)  # 会议类型: tencent, zoom, etc.
     meeting_link = Column(String(500), nullable=True)  # 会议链接
+    meeting_summary_file_id = Column(
+        Integer,
+        ForeignKey("file.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    meeting_summary = relationship("File", backref="meeting_summary")
     related_files = relationship("File", secondary="group_meeting_attachment")
     publisher = Column(
         Integer,

@@ -63,7 +63,7 @@ async def get_avatar_url(request, user_id: int) -> str:
         user_email = user.email
 
     email_sha = hashlib.sha256(user_email.encode()).hexdigest()
-    avatar_url = f"https://sdn.geekzu.org/avatar/{email_sha}?d=identicon"
+    avatar_url = f"https://gravatar.bzpl.tech/{email_sha}?d=identicon"
 
     await cache.set(cache_key, avatar_url, expire=3600)
     return avatar_url

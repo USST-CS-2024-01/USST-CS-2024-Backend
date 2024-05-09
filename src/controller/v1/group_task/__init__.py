@@ -248,7 +248,7 @@ async def create_group_task(
             if current_group_task.role not in member.roles:
                 return ErrorResponse.new_error(
                     code=403,
-                    message="You can't create task",
+                    message="您不是当前任务的负责人，无法创建代办事项",
                 )
 
     try:
@@ -394,19 +394,14 @@ async def update_group_task(
                 message="Task not found",
             )
 
-        # publisher 角色可以修改所有字段，assignees 可以修改 status 和 related_files
+        # publisher 可以修改所有字段，assignees 可以修改 status 和 related_files
         if not group_task:
             return ErrorResponse.new_error(
                 code=404,
                 message="Task not found",
             )
 
-        if (
-            service.role.check_user_has_role(
-                request, class_id, user_id, [group_task.publisher]
-            )
-            or is_manager
-        ):
+        if group_task.publisher == user_id or is_manager:
             group_task.update_time = datetime.datetime.now()
             # Handle assignees and related_files before general attributes
             if body.assignees:
@@ -426,6 +421,8 @@ async def update_group_task(
 
             # Update other attributes
             for key, value in update_dict.items():
+                if key == "deadline":
+                    value = timestamp_to_datetime(value)
                 setattr(group_task, key, value)
 
         elif service.role.check_user_has_role(
@@ -450,6 +447,7 @@ async def update_group_task(
                 message="You can't update this task",
             )
 
+        session.add(group_task)
         session.commit()
 
         request.app.ctx.log.add_log(

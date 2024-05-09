@@ -61,7 +61,7 @@ def check_user_has_role(
         if not class_member:
             return False
 
-        class_member_roles = set(class_member.roles)
+        class_member_roles = set([role.id for role in class_member.roles])
         if not set(role_ids).issubset(class_member_roles):
             return False
 

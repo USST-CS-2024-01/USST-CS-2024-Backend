@@ -496,7 +496,7 @@ async def convert_to_no_comment(request, file_id: int):
     200,
     description="成功",
     content={
-        "application/json": BaseDataResponse.schema(
+        "application/json": BaseDataResponse[FileSchema].schema(
             ref_template="#/components/schemas/{model}"
         )
     },

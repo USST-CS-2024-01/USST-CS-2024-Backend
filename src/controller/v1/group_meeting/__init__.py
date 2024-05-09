@@ -1,4 +1,5 @@
 import time
+import traceback
 
 from sanic import Blueprint
 from sanic_ext import openapi
@@ -409,6 +410,7 @@ async def create_meeting(
 
         session.add(meeting)
         session.commit()
+        session.refresh(meeting)
 
         request.app.ctx.log.add_log(
             log_type="group_meeting:create",
@@ -416,6 +418,18 @@ async def create_meeting(
             request=request,
         )
 
+        try:
+            await service.group_meeting.create_group_meeting_summary_file(
+                request, meeting.name, meeting.id, group_id
+            )
+        except Exception as e:
+            traceback.print_exc()
+            return ErrorResponse.new_error(
+                code=500,
+                message="Create meeting summary file failed",
+            )
+
+        session.add(meeting)
         return BaseDataResponse(
             data=GroupMeetingSchema.model_validate(meeting)
         ).json_response()
