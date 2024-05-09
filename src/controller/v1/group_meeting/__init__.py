@@ -187,12 +187,12 @@ async def delete_meeting(request, class_id: int, group_id: int, meeting_id: int)
                 message="Meeting not found",
             )
 
-        # 已经到开始时间的会议不能删除
-        if meeting.start_time.timestamp() < time.time():
-            return ErrorResponse.new_error(
-                code=403,
-                message="Meeting has started",
-            )
+        # # 已经到开始时间的会议不能删除
+        # if meeting.start_time.timestamp() < time.time():
+        #     return ErrorResponse.new_error(
+        #         code=403,
+        #         message="Meeting has started",
+        #     )
 
         # 判断是否有权限删除
         if not is_manager and not service.role.check_user_has_role(
@@ -274,12 +274,13 @@ async def update_meeting(
                 message="Meeting not found",
             )
 
-        # 已经到开始时间的会议不能修改
+        # 已经到开始时间的会议不能修改会议开始时间
         if meeting.start_time.timestamp() < time.time():
-            return ErrorResponse.new_error(
-                code=403,
-                message="Meeting has started",
-            )
+            body.start_time = None
+
+        # 已经到结束时间的会议不能修改会议结束时间
+        if meeting.end_time.timestamp() < time.time():
+            body.end_time = None
 
         # 判断是否有权限修改
         if not is_manager and not service.role.check_user_has_role(
@@ -290,31 +291,25 @@ async def update_meeting(
                 message="Permission denied",
             )
 
-        if body.start_time and body.start_time < time.time():
+        if body.start_time is not None and body.start_time < time.time():
             return ErrorResponse.new_error(
                 code=400,
                 message="Meeting start time is invalid",
             )
+        elif body.start_time is not None:
+            meeting.start_time = (
+                timestamp_to_datetime(body.start_time) or meeting.start_time
+            )
 
-        if body.end_time and body.end_time < body.start_time:
+        if body.end_time is not None and body.end_time < meeting.start_time.timestamp():
             return ErrorResponse.new_error(
                 code=400,
                 message="Meeting end time is invalid",
             )
-
-        if body.related_files:
-            files = service.file.check_file_in_group(
-                request, group_id, body.related_files
-            )
-            service.group_meeting.update_group_meeting_attachment(
-                request, meeting_id, [file.id for file in files]
-            )
+        elif body.end_time is not None:
+            meeting.end_time = timestamp_to_datetime(body.end_time) or meeting.end_time
 
         meeting.name = body.name or meeting.name
-        meeting.start_time = (
-            timestamp_to_datetime(body.start_time) or meeting.start_time
-        )
-        meeting.end_time = timestamp_to_datetime(body.end_time) or meeting.end_time
         meeting.meeting_type = body.meeting_type or meeting.meeting_type
         meeting.meeting_link = body.meeting_link or meeting.meeting_link
 
@@ -376,19 +371,19 @@ async def create_meeting(
     ):
         return ErrorResponse.new_error(
             code=403,
-            message="You don't have permission to create meeting",
+            message="您不是当前任务的负责人，无法召开会议",
         )
 
     if body.start_time < time.time():
         return ErrorResponse.new_error(
             code=400,
-            message="Meeting start time is invalid",
+            message="会议开始时间需要晚于当前时间",
         )
 
     if body.end_time < body.start_time:
         return ErrorResponse.new_error(
             code=400,
-            message="Meeting end time is invalid",
+            message="会议结束时间需要晚于开始时间",
         )
 
     with db() as session:
@@ -402,11 +397,6 @@ async def create_meeting(
             publisher=current_task.specified_role,
             group_id=group_id,
         )
-        if body.related_files:
-            files = service.file.check_file_in_group(
-                request, group_id, body.related_files
-            )
-            meeting.related_files.extend(files)
 
         session.add(meeting)
         session.commit()

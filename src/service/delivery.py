@@ -103,6 +103,77 @@ def check_task_score_finished(request, task_id: int, group_id: int) -> bool:
         return True
 
 
+def get_completed_scores_users(request, task_id: int, group_id: int) -> list:
+    """
+    Retrieves a list of user IDs who have completed their scoring for the given task.
+
+    :param request: Request object, which may include details like database connection
+    :param task_id: Task ID for which scores need to be checked
+    :param group_id: Group ID whose members' scores are being checked
+
+    :return: List of user IDs who have completed their scoring
+    """
+    db = request.app.ctx.db
+    completed_user_ids = []
+
+    with db() as session:
+        # Fetch the group details
+        stmt = select(Group).where(Group.id.__eq__(group_id))
+        group = session.execute(stmt).scalar()
+        if not group:
+            raise ValueError("Group not found")
+
+        # Get group members excluding the group leader
+        member_ids = [member.user_id for member in group.members]
+        leader = service.group.get_group_manager_user_id(
+            request, group.class_id, group_id
+        )
+        if leader in member_ids:
+            member_ids.remove(leader)
+
+        # Check for completed scores by group members
+        stmt = select(TaskGroupMemberScore).where(
+            and_(
+                TaskGroupMemberScore.task_id == task_id,
+                TaskGroupMemberScore.group_id == group_id,
+            )
+        )
+        scores = session.execute(stmt).scalar()
+
+        if not scores:
+            return completed_user_ids
+
+        # Check whether the leader has completed scoring
+        finished = True
+        for member_id in member_ids:
+            member_id = str(member_id)
+            if member_id not in scores.group_member_scores:
+                finished = False
+                break
+            if (
+                scores.group_member_scores[member_id] < 0
+                or scores.group_member_scores[member_id] > 100
+            ):
+                finished = False
+                break
+        if finished:
+            completed_user_ids.append(leader)
+
+        # Check whether the group members have completed scoring
+        for member_id in member_ids:
+            member_id = str(member_id)
+            if member_id not in scores.group_manager_score:
+                continue
+            if (
+                scores.group_manager_score[member_id] < 0
+                or scores.group_manager_score[member_id] > 100
+            ):
+                continue
+            completed_user_ids.append(int(member_id))
+
+    return completed_user_ids
+
+
 def check_can_create_delivery(request, task_id: int, group_id: int) -> bool:
     """
     Check whether the user can create a new delivery
@@ -142,7 +213,7 @@ def check_can_create_delivery(request, task_id: int, group_id: int) -> bool:
             raise ValueError("提交的内容正在审核中或者已经通过，无法提交新的内容")
 
     if not check_task_score_finished(request, task_id, group_id):
-        raise ValueError("任务评分未完成，无法提交任务")
+        raise ValueError("至少存在一名组员仍未完成当前任务的组内互评，请等待组员完成后再提交。")
 
     return True
 

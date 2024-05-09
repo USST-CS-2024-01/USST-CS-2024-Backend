@@ -158,7 +158,6 @@ class GroupMeetingSchema(BaseJsonAbleModel):
     participants: List[UserSchema]
     meeting_type: str
     meeting_link: Optional[str] = None
-    related_files: List["FileSchema"]
     task_id: Optional[int] = None
     publisher: int
     meeting_summary: Optional[FileSchema] = None
@@ -168,12 +167,6 @@ class GroupMeetingSchema(BaseJsonAbleModel):
 class GroupMeetingParticipantSchema(BaseJsonAbleModel):
     meeting_id: int
     user_id: int
-
-
-@openapi.component()
-class GroupMeetingAttachmentSchema(BaseJsonAbleModel):
-    meeting_id: int
-    file_id: int
 
 
 @openapi.component()

@@ -9,6 +9,7 @@ import service.group_meeting
 import service.group_task
 import service.role
 import service.task
+import service.delivery
 from controller.v1.group_member_score.request_model import CreateGroupMemberScoreRequest
 from middleware.auth import need_login
 from middleware.validator import validate
@@ -202,7 +203,43 @@ async def create_group_member_score(
             request=request,
             user=user,
             log_type="group_member_score:create_group_member_score",
-            comment=f"Create group member score: {score.id}",
+            content=f"Create group member score for task {task_id}, group {group_id}, class {class_id}",
         )
 
         return BaseDataResponse().json_response()
+
+
+@group_member_score_bp.route(
+    "/class/<class_id:int>/group/<group_id:int>/task/<task_id:int>/group_score/finished",
+    methods=["GET"],
+)
+@openapi.summary("获取已完成互评的用户ID")
+@openapi.tag("组内互评接口")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseDataResponse[int].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
+@need_login()
+async def get_completed_scores_users(
+    request, class_id: int, group_id: int, task_id: int
+):
+    """
+    获取已完成互评的用户ID
+    """
+    group, member, is_manager = service.group.have_group_access(
+        request, class_id, group_id
+    )
+    if not group:
+        return ErrorResponse.new_error(
+            code=404,
+            message="Group not found",
+        )
+
+    uids = service.delivery.get_completed_scores_users(request, task_id, group_id)
+    return BaseDataResponse(data=uids).json_response()

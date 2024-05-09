@@ -196,7 +196,6 @@ class GroupMeeting(Base):
         index=True,
     )
     meeting_summary = relationship("File", backref="meeting_summary")
-    related_files = relationship("File", secondary="group_meeting_attachment")
     publisher = Column(
         Integer,
         ForeignKey("group_role.id", ondelete="CASCADE", onupdate="CASCADE"),
@@ -220,20 +219,6 @@ class GroupMeetingParticipant(Base):
     user_id = Column(
         Integer,
         ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"),
-        primary_key=True,
-    )
-
-
-class GroupMeetingAttachment(Base):
-    __tablename__ = "group_meeting_attachment"
-    meeting_id = Column(
-        Integer,
-        ForeignKey("group_meeting.id", ondelete="CASCADE", onupdate="CASCADE"),
-        primary_key=True,
-    )
-    file_id = Column(
-        Integer,
-        ForeignKey("file.id", ondelete="CASCADE", onupdate="CASCADE"),
         primary_key=True,
     )
 
