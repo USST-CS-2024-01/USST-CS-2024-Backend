@@ -257,8 +257,13 @@ async def create_group_repo_record(
         session.add(group)
         for member in group.members:
             for u in member.repo_usernames:
-                username_map[u] = member.user_id
-        repo_record.username_map = username_map
+                username_map[u] = {
+                    "id": member.user_id,
+                    "username": member.user.username,
+                    "name": member.user.name,
+                    "employee_id": member.user.employee_id,
+                }
+        repo_record.user_repo_mapping = username_map
         session.add(repo_record)
         session.commit()
         session.refresh(repo_record)
