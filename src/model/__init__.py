@@ -529,6 +529,8 @@ class Delivery(Base):
     comment_time = Column(DateTime, nullable=True, index=True)
     task_grade_percentage = Column(Float, nullable=False, index=True)
 
+    task = relationship("Task", backref="deliveries")
+
 
 class AIDocScoreRecord(Base):
     __tablename__ = "ai_doc_score_record"

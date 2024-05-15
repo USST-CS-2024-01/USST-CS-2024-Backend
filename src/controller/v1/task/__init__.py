@@ -553,7 +553,7 @@ async def start_teaching(request, class_id: int):
 
         group_leader_count = session.execute(stmt_group_leader_count).scalar()
         stmt_group_count = select(func.count(Group.id)).where(
-            Group.class_id == class_id
+            Group.class_id.__eq__(class_id)
         )
         group_count = session.execute(stmt_group_count).scalar()
 
@@ -631,4 +631,43 @@ async def get_group_task_chain(request, class_id: int, group_id: int):
         return TaskChainResponse(
             task_chain=[TaskSchema.model_validate(task) for task in task_chain],
             current_task_id=current_task_id,
+        ).json_response()
+
+
+@task_bp.route("/class/<class_id:int>/task_chain", methods=["GET"])
+@openapi.summary("获取班级任务链")
+@openapi.tag("任务接口")
+@openapi.description("获取排序后的班级任务链")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[TaskSchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
+@need_login()
+async def get_class_task_chain(request, class_id: int):
+    db = request.app.ctx.db
+
+    clazz = has_class_access(request, class_id)
+    if not clazz:
+        return ErrorResponse.new_error(
+            404,
+            "Class Not Found",
+        )
+
+    try:
+        task_chain = service.task.check_task_chain(request, class_id)
+    except ValueError as e:
+        return ErrorResponse.new_error(400, str(e))
+
+    with db() as session:
+        for task in task_chain:
+            session.add(task)
+        return BaseListResponse(
+            data=[TaskSchema.model_validate(task) for task in task_chain],
+            total=len(task_chain),
         ).json_response()

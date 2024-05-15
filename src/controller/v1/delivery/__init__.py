@@ -27,6 +27,9 @@ from model import (
     RepoRecordStatus,
     UserType,
     TeacherScore,
+    Task,
+    ClassMember,
+    Group,
 )
 from model.response_model import (
     ErrorResponse,
@@ -83,6 +86,64 @@ async def list_delivery(request, class_id: int, group_id: int, task_id: int):
         deliveries = session.execute(stmt).scalars().all()
         return BaseListResponse(
             data=[DeliverySchema.model_validate(delivery) for delivery in deliveries]
+        ).json_response()
+
+
+from sqlalchemy import func, desc
+from sqlalchemy.orm import aliased
+
+
+@delivery_bp.route(
+    "/class/<class_id:int>/task/<task_id:int>/delivery/latest",
+    methods=["GET"],
+)
+@openapi.summary("获取任务各个小组的最新提交")
+@openapi.tag("任务提交接口")
+@openapi.description("""获取任务各个小组的最新提交，若小组没有提交则返回 None。""")
+@openapi.response(
+    200,
+    description="成功",
+    content={
+        "application/json": BaseListResponse[DeliverySchema].schema(
+            ref_template="#/components/schemas/{model}"
+        )
+    },
+)
+@openapi.secured("session")
+@need_login()
+@need_role([UserType.teacher, UserType.admin])
+async def get_latest_delivery(request, class_id: int, task_id: int):
+    db = request.app.ctx.db
+    if not service.class_.has_class_access(request, class_id):
+        return ErrorResponse.new_error(
+            404,
+            "Class Not Found",
+        )
+
+    with db() as session:
+        subquery = (
+            select(
+                Delivery.id,
+                Delivery.group_id,
+                func.row_number()
+                .over(
+                    partition_by=Delivery.group_id,
+                    order_by=Delivery.delivery_time.desc(),
+                )
+                .label("row_num"),
+            )
+            .where(Delivery.task_id.__eq__(task_id))
+            .subquery()
+        )
+
+        delivery_alias = aliased(Delivery, subquery)
+
+        stmt = select(delivery_alias).where(subquery.c.row_num == 1)
+
+        deliveries = session.execute(stmt).scalars().all()
+        return BaseListResponse(
+            data=[DeliverySchema.model_validate(delivery) for delivery in deliveries],
+            total=len(deliveries),
         ).json_response()
 
 
@@ -396,13 +457,12 @@ async def add_delivery_item(
                 and_(
                     DeliveryItem.item_type == body.item_type,
                     DeliveryItem.item_repo_id == body.item_id,
+                    DeliveryItem.delivery_id == delivery.id,
                 )
             )
             dup_item = session.execute(dup_stmt).scalar()
             if dup_item:
-                return ErrorResponse.new_error(
-                    code=403, message="Item already exists in the draft."
-                )
+                return ErrorResponse.new_error(code=403, message="交付物已经存在，请勿重复添加。")
 
             stmt = select(RepoRecord).where(
                 and_(
@@ -564,7 +624,13 @@ async def submit_draft(request, class_id: int, group_id: int, task_id: int):
     with db() as session:
         draft: Delivery = service.delivery.get_task_draft(request, task_id, group_id)
         if not draft:
-            return ErrorResponse.new_error(code=404, message="Draft not found.")
+            return ErrorResponse.new_error(code=404, message="草稿不存在。")
+
+        session.add(draft)
+        task: Task = draft.task
+        need_role_id = task.specified_role
+        if not any([role.id == need_role_id for role in class_member.roles]):
+            return ErrorResponse.new_error(code=403, message="只有指定角色的成员才能提交任务。")
 
         if is_manager:
             draft.delivery_status = DeliveryStatus.teacher_review
@@ -685,7 +751,7 @@ async def accept_review(
         if delivery.delivery_status not in [
             DeliveryStatus.leader_review,
             DeliveryStatus.teacher_review,
-            DeliveryStatus.teacher_rejected,
+            DeliveryStatus.teacher_approved,
         ]:
             return ErrorResponse.new_error(
                 code=403, message="Delivery status is not review."
