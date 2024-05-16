@@ -80,6 +80,10 @@ class Announcement(Base):
     read_users = relationship("User", secondary="announcement_read")
     publish_time = Column(DateTime, nullable=False, index=True)
 
+    publisher_user = relationship(
+        "User", backref="announcements", foreign_keys="Announcement.publisher"
+    )
+
 
 class AnnouncementRead(Base):
     __tablename__ = "announcement_read"

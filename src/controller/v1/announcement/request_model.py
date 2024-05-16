@@ -31,6 +31,7 @@ class ListAnnouncementRequest(ListQueryRequest):
         description="状态",
         pattern=r"^(all|read|unread)$",
     )
+    class_id: Optional[int] = Field(None, description="班级ID")
 
 
 class UpdateAnnouncementRequest(BaseModel):

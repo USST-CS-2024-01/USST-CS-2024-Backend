@@ -15,7 +15,12 @@ from controller.v1.announcement.request_model import (
 )
 from middleware.auth import need_login, need_role
 from middleware.validator import validate
-from model import UserType, Announcement, AnnouncementReceiverType, User
+from model import (
+    UserType,
+    Announcement,
+    AnnouncementReceiverType,
+    User,
+)
 from model.response_model import (
     BaseResponse,
     ErrorResponse,
@@ -125,7 +130,7 @@ async def create_announcement(request, body: CreateAnnouncementRequest):
 
         session.merge(announcement)
         session.commit()
-        session.refresh(announcement)
+        # session.refresh(announcement)
 
         request.app.ctx.log.add_log(
             request=request,
@@ -175,7 +180,12 @@ async def list_announcement(request, query: ListAnnouncementRequest):
         elif query.status == "unread":
             stmt = stmt.filter(~Announcement.read_users.any(User.id == user.id))
         if query.order_by:
-            stmt = stmt.order_by(getattr(Announcement, query.order_by).desc())
+            stmt = stmt.order_by(
+                # 此处使用 getattr 函数获取排序字段，asc和desc是function类型，需要调用
+                getattr(
+                    getattr(Announcement, query.order_by), query.asc and "asc" or "desc"
+                )()
+            )
 
         # 筛选公告
         stmt = stmt.filter(
@@ -190,6 +200,9 @@ async def list_announcement(request, query: ListAnnouncementRequest):
                 Announcement.receiver_type == AnnouncementReceiverType.all,
             )
         )
+
+        if query.class_id:
+            stmt = stmt.filter(Announcement.receiver_class_id.__eq__(query.class_id))
 
         count_stmt = select(func.count()).select_from(stmt.subquery())
         stmt = stmt.limit(query.limit).offset(query.offset)

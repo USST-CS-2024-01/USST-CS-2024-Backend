@@ -98,6 +98,8 @@ class AnnouncementSchema(BaseJsonAbleModel):
     publish_time: datetime
     read: Optional[bool] = None
 
+    publisher_user: Optional[UserSchema] = None
+
 
 @openapi.component()
 class AnnouncementReadSchema(BaseJsonAbleModel):
