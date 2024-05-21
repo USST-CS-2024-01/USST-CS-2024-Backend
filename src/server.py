@@ -19,7 +19,7 @@ def create_app(app_name: str, config_file: str = "config.yaml") -> Sanic:
     inject_controller(app)
     inject_listener(app)
 
-    app.config.CORS_ORIGINS = "http://127.0.0.1:3000,http://localhost:3000,http://192.168.19.2:3000,http://192.168.31.106:3000"
+    app.config.CORS_ORIGINS = "http://127.0.0.1:3000,http://localhost:3000,http://192.168.19.2:3000,http://192.168.31.106:3000,http://192.168.31.118:3000"
     Extend(app)
 
     # Add security scheme, Authentication header is required

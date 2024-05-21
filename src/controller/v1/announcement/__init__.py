@@ -270,6 +270,8 @@ async def read_announcement(request, announcement_id: int):
 )
 @need_login()
 async def get_announcement(request, announcement_id: int):
+    user = request.ctx.user
+
     try:
         announcement = service.announcement.get_announcement(request, announcement_id)
     except ValueError as e:
@@ -279,6 +281,13 @@ async def get_announcement(request, announcement_id: int):
 
     with db() as session:
         session.add(announcement)
+
+        # 授予临时文件访问权限
+        files = announcement.attachment
+        file_ids = [file.id for file in files]
+        for x in file_ids:
+            await service.file.grant_file_access(request, x, user.id, {"read": True})
+
         ann = AnnouncementSchema.model_validate(announcement)
         ann.read = request.ctx.user.id in [user.id for user in announcement.read_users]
         return BaseDataResponse(data=ann).json_response()
