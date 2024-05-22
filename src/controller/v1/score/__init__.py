@@ -54,13 +54,16 @@ async def get_score_list(request, class_id: int):
 
         user_result = session.execute(user_list_stmt).scalars().all()
         stmt = select(TeacherScore).where(
-            TeacherScore.user_id.in_(user.user_id for user in user_result)
+            TeacherScore.user_id.in_(user.user_id for user in user_result),
         )
         result = session.execute(stmt).scalars().all()
 
         score_dict = {}
         user_dict = {}
         for item in result:
+            if item.task.class_id != class_id:
+                continue
+
             key = item.user.id
             if key not in score_dict:
                 score_dict[key] = []

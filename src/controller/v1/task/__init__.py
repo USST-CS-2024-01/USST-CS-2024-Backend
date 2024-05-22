@@ -271,18 +271,6 @@ async def update_class_task(
     if update_dict.get("deadline") is not None:
         update_dict["deadline"] = timestamp_to_datetime(update_dict["deadline"])
 
-    # 需要判定角色ID是否属于该班级
-    check_role_stmt = (
-        select(GroupRole)
-        .where(
-            and_(
-                GroupRole.class_id == class_id,
-                GroupRole.id == update_dict["specified_role"],
-            )
-        )
-        .limit(1)
-    )
-
     with db() as session:
         task = session.execute(
             select(Task)
@@ -297,6 +285,17 @@ async def update_class_task(
             )
 
         if update_dict.get("specified_role"):
+            # 需要判定角色ID是否属于该班级
+            check_role_stmt = (
+                select(GroupRole)
+                .where(
+                    and_(
+                        GroupRole.class_id == class_id,
+                        GroupRole.id == update_dict.get("specified_role"),
+                    )
+                )
+                .limit(1)
+            )
             result = session.execute(check_role_stmt).scalar_one_or_none()
             if not result:
                 return ErrorResponse.new_error(

@@ -75,6 +75,7 @@ def check_task_chain(request, class_id, nocheck=False) -> List[Task]:
         next_task_id = first_task.next_task_id
 
         cnt = 0
+        task_chain.append(first_task)
 
         while next_task_id and cnt < len(tasks):
             task = task_map.pop(next_task_id, None)
@@ -88,7 +89,7 @@ def check_task_chain(request, class_id, nocheck=False) -> List[Task]:
         if cnt != len(tasks) - 1 and not nocheck:
             raise ValueError("Task chain is not complete.")
 
-    return tasks
+    return task_chain
 
 
 def get_locked_tasks(request, class_id: int, nocheck=False) -> List[Task]:
