@@ -585,7 +585,6 @@ class Log(Base):
     content = Column(Text, nullable=False)
     user_id = Column(
         Integer,
-        ForeignKey("user.id", ondelete="NO ACTION", onupdate="CASCADE"),
         nullable=False,
         index=True,
     )

@@ -90,6 +90,7 @@ class Goflet:
         :param query: Query parameters
         :return: URL with query parameters
         """
+        path = "/".join(quote(p) for p in path.split("/"))
         url = f"{self.base_url}{path}"
         jwt_token = self.generate_jwt(
             permissions=[Permission(path=path, methods=[method], query=query)]
